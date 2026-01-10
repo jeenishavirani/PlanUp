@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_splash_gradient">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- App Logo -->
+        <ImageView
+            android:id="@+id/imgLogo"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:src="@drawable/logo_planup"
+            android:scaleType="fitCenter"
+            android:contentDescription="PlanUp Logo" />
+
+        <!-- App Name -->
+        <TextView
+            android:id="@+id/txtAppName"
+            android:layout_marginTop="14dp"
+            android:text="PlanUp"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="#230C59"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <!-- Tagline -->
+        <TextView
+            android:id="@+id/txtTagline"
+            android:layout_marginTop="6dp"
+            android:text="Plan smart. Live better."
+            android:textSize="14sp"
+            android:textColor="#EDE7FF"
+            android:alpha="0.85"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
