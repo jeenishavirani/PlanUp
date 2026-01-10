@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme. -->
     <style name="Base.Theme.PlanUp" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primaryColor</item>
@@ -29,9 +29,7 @@
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorSurface">@color/white</item>
         <item name="colorOnSurface">@color/textColorPrimary</item>
-        <!-- Legacy pickers often use colorAccent for button text -->
         <item name="colorAccent">@color/primaryColor</item>
-        <!-- Explicitly set button text color -->
         <item name="android:buttonBarPositiveButtonStyle">@style/DialogButtonStyle</item>
         <item name="android:buttonBarNegativeButtonStyle">@style/DialogButtonStyle</item>
     </style>
@@ -88,7 +86,8 @@
     <style name="AppEditText">
         <item name="android:layout_height">52dp</item>
         <item name="android:background">@drawable/bg_input</item>
-        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
         <item name="android:textSize">16sp</item>
         <item name="android:textColor">@color/textColorPrimary</item>
         <item name="android:textColorHint">@color/hintColor</item>

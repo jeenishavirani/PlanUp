@@ -27,7 +27,7 @@
                 style="@style/AppText.Header"
                 android:layout_height="wrap_content"
                 android:layout_width="wrap_content"
-                android:text="Your Progress 📊"
+                android:text="@string/stats_progress_title"
                 android:textColor="@color/white"/>
 
             <TextView
@@ -35,7 +35,7 @@
                 android:layout_height="wrap_content"
                 android:layout_width="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Track your productivity journey"
+                android:text="@string/stats_progress_subtitle"
                 android:textColor="#E0E0E0"
                 android:gravity="center"/>
         </LinearLayout>
@@ -59,8 +59,8 @@
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="20dp">
-                    <TextView style="@style/AppText.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Tasks"/>
-                    <TextView android:id="@+id/tvTotalCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" />
+                    <TextView style="@style/AppText.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_total_tasks"/>
+                    <TextView android:id="@+id/tvTotalCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_default_count" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -80,9 +80,9 @@
                         style="@style/AppText.Body"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Totally Completed"
+                        android:text="@string/stats_completed"
                         android:textColor="@color/task_completed" />
-                    <TextView android:id="@+id/tvCompletedCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" />
+                    <TextView android:id="@+id/tvCompletedCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_default_count" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -102,9 +102,9 @@
                         style="@style/AppText.Body"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Totally Missed"
+                        android:text="@string/stats_missed"
                         android:textColor="@color/task_missed" />
-                    <TextView android:id="@+id/tvMissedCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" />
+                    <TextView android:id="@+id/tvMissedCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_default_count" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -119,8 +119,8 @@
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="20dp">
-                    <TextView style="@style/AppText.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Streak 🔥" android:textColor="#FF9800"/>
-                    <TextView android:id="@+id/tvStreakCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" />
+                    <TextView style="@style/AppText.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_streak" android:textColor="#FF9800"/>
+                    <TextView android:id="@+id/tvStreakCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_default_count" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </GridLayout>
@@ -150,7 +150,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:text="No chart data available"
+                    android:text="@string/stats_no_chart_data"
                     android:visibility="gone"
                     android:textColor="@color/textColorSecondary"/>
             </FrameLayout>
@@ -163,7 +163,7 @@
             android:layout_height="wrap_content"
             android:layout_width="match_parent"
             android:layout_margin="24dp"
-            android:text="Consistency beats intensity. Keep going 💪"
+            android:text="@string/stats_motivation"
             android:textStyle="italic"
             android:gravity="center"/>
 
