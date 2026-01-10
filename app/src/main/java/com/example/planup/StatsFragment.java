@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,6 +28,8 @@ import java.util.List;
 public class StatsFragment extends Fragment {
 
     private LineChart lineChart;
+    private TextView tvTotalTasks, tvCompleted, tvMissed, tvStreak;
+
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
@@ -40,21 +43,24 @@ public class StatsFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_stats, container, false);
 
         lineChart = view.findViewById(R.id.lineChart);
+        tvTotalTasks = view.findViewById(R.id.tvTotalTasks);
+        tvCompleted = view.findViewById(R.id.tvCompleted);
+        tvMissed = view.findViewById(R.id.tvMissed);
+        tvStreak = view.findViewById(R.id.tvStreak);
+
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        loadWeeklyStats();
+        loadStats();
 
         return view;
     }
 
-    private void loadWeeklyStats() {
+    private void loadStats() {
 
         if (mAuth.getCurrentUser() == null) return;
-
         String uid = mAuth.getCurrentUser().getUid();
 
-        // Last 7 days
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DAY_OF_YEAR, -6);
         Date startDate = cal.getTime();
@@ -63,34 +69,79 @@ public class StatsFragment extends Fragment {
                 .document(uid)
                 .collection("tasks")
                 .get()
-                .addOnSuccessListener(querySnapshot -> {
+                .addOnSuccessListener(snapshot -> {
 
-                    int[] completed = new int[7];
-                    int[] missed = new int[7];
+                    int total = 0;
+                    int completedCount = 0;
+                    int missedCount = 0;
+                    int streak = 0;
 
-                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                    int[] weeklyCompleted = new int[7];
+                    int[] weeklyMissed = new int[7];
 
-                        Date dueDate = doc.getDate("dueDate");
+                    List<com.google.firebase.firestore.DocumentSnapshot> docs = snapshot.getDocuments();
+
+
+
+                    // 🔥 SORT BY COMPLETION TIME (latest first)
+                    docs.sort((a, b) -> {
+                        Date da = a.getDate("dueDate");
+                        Date db = b.getDate("dueDate");
+                        if (da == null || db == null) return 0;
+                        return db.compareTo(da);
+                    });
+
+                    boolean streakBroken = false;
+
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : docs) {
+
+
+                        total++;
+
                         String status = doc.getString("status");
+                        Date dueDate = doc.getDate("dueDate");
 
-                        if (dueDate == null || status == null) continue;
-                        if (dueDate.before(startDate)) continue;
+                        // ----- STREAK LOGIC -----
+                        if (!streakBroken) {
+                            if ("Completed".equalsIgnoreCase(status)
+                                    || "Completed Late".equalsIgnoreCase(status)) {
+                                streak++;
+                            } else if ("Missed".equalsIgnoreCase(status)) {
+                                streakBroken = true;
+                            }
+                        }
 
-                        Calendar taskCal = Calendar.getInstance();
-                        taskCal.setTime(dueDate);
+                        // ----- COUNTS -----
+                        if ("Completed".equalsIgnoreCase(status)
+                                || "Completed Late".equalsIgnoreCase(status)) {
+                            completedCount++;
+                        } else if ("Missed".equalsIgnoreCase(status)) {
+                            missedCount++;
+                        }
 
-                        int dayIndex = 6 - (int) ((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+                        // ----- WEEKLY CHART -----
+                        if (dueDate == null || dueDate.before(startDate)) continue;
+
+                        int dayIndex = 6 - (int) ((new Date().getTime() - dueDate.getTime())
+                                / (1000 * 60 * 60 * 24));
+
                         if (dayIndex < 0 || dayIndex > 6) continue;
 
                         if ("Completed".equalsIgnoreCase(status)
                                 || "Completed Late".equalsIgnoreCase(status)) {
-                            completed[dayIndex]++;
+                            weeklyCompleted[dayIndex]++;
                         } else if ("Missed".equalsIgnoreCase(status)) {
-                            missed[dayIndex]++;
+                            weeklyMissed[dayIndex]++;
                         }
                     }
 
-                    drawChart(completed, missed);
+                    // 🔹 UPDATE UI
+                    tvTotalTasks.setText("Total Tasks\n" + total);
+                    tvCompleted.setText("Completed\n" + completedCount);
+                    tvMissed.setText("Missed\n" + missedCount);
+                    tvStreak.setText("Streak 🔥\n" + streak + " tasks");
+
+                    drawChart(weeklyCompleted, weeklyMissed);
                 });
     }
 
