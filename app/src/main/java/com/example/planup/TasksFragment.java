@@ -8,6 +8,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+
+import java.util.Date;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -118,9 +123,35 @@ public class TasksFragment extends Fragment
 
                     taskList.clear();
 
+                    Date today = new Date();
+
                     for (QueryDocumentSnapshot doc : querySnapshot) {
+
                         TaskModel task = doc.toObject(TaskModel.class);
                         task.setId(doc.getId());
+
+                        // 🔥 AUTO-MISS LOGIC
+                        if (task.isMissed() && !"Missed".equalsIgnoreCase(task.getStatus())) {
+                            task.setStatus("Missed");
+
+                            db.collection("users")
+                                    .document(uid)
+                                    .collection("tasks")
+                                    .document(task.getId())
+                                    .update("status", "Missed");
+                        }
+
+                        // 🔥 HIDE COMPLETED TASKS FROM PREVIOUS DAYS
+                        if ("Completed".equalsIgnoreCase(task.getStatus())
+                                || "Completed Late".equalsIgnoreCase(task.getStatus())) {
+
+                            if (task.getDueDate() != null
+                                    && task.getDueDate().before(today)) {
+                                continue; // ❌ skip old completed tasks
+                            }
+                        }
+
+                        // ✅ SHOW TASK
                         taskList.add(task);
                     }
 
@@ -133,9 +164,37 @@ public class TasksFragment extends Fragment
                         rvTasks.setVisibility(View.VISIBLE);
                     }
 
+                    Collections.sort(taskList, (t1, t2) -> {
+
+                        // 1️⃣ Pending tasks first
+                        boolean t1Pending = "Pending".equalsIgnoreCase(t1.getStatus());
+                        boolean t2Pending = "Pending".equalsIgnoreCase(t2.getStatus());
+
+                        if (t1Pending && !t2Pending) return -1;
+                        if (!t1Pending && t2Pending) return 1;
+
+                        // 2️⃣ Missed tasks next
+                        boolean t1Missed = "Missed".equalsIgnoreCase(t1.getStatus());
+                        boolean t2Missed = "Missed".equalsIgnoreCase(t2.getStatus());
+
+                        if (t1Missed && !t2Missed) return -1;
+                        if (!t1Missed && t2Missed) return 1;
+
+                        // 3️⃣ Sort by due date (earliest first)
+                        Date d1 = t1.getDueDate();
+                        Date d2 = t2.getDueDate();
+
+                        if (d1 == null && d2 == null) return 0;
+                        if (d1 == null) return 1;
+                        if (d2 == null) return -1;
+
+                        return d1.compareTo(d2);
+                    });
+
                     taskAdapter.notifyDataSetChanged();
                 });
     }
+
 
     // ================= STATUS CHANGE =================
     @Override

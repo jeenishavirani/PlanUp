@@ -12,6 +12,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -226,6 +229,34 @@ public class HomeFragment extends Fragment
                     tvPendingTasks.setText("Pending: " + pending);
                     tvCompletedTasks.setText("Completed: " + completed);
                     tvTotalTasks.setText("Total: " + taskList.size());
+
+
+                    Collections.sort(taskList, (t1, t2) -> {
+
+                        // 1️⃣ Pending tasks first
+                        boolean t1Pending = "Pending".equalsIgnoreCase(t1.getStatus());
+                        boolean t2Pending = "Pending".equalsIgnoreCase(t2.getStatus());
+
+                        if (t1Pending && !t2Pending) return -1;
+                        if (!t1Pending && t2Pending) return 1;
+
+                        // 2️⃣ Missed tasks next
+                        boolean t1Missed = "Missed".equalsIgnoreCase(t1.getStatus());
+                        boolean t2Missed = "Missed".equalsIgnoreCase(t2.getStatus());
+
+                        if (t1Missed && !t2Missed) return -1;
+                        if (!t1Missed && t2Missed) return 1;
+
+                        // 3️⃣ Sort by due date (earliest first)
+                        Date d1 = t1.getDueDate();
+                        Date d2 = t2.getDueDate();
+
+                        if (d1 == null && d2 == null) return 0;
+                        if (d1 == null) return 1;
+                        if (d2 == null) return -1;
+
+                        return d1.compareTo(d2);
+                    });
 
                     taskAdapter.notifyDataSetChanged();
                 });
