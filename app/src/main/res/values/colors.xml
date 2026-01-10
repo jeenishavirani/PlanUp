@@ -2,4 +2,8 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <color name="task_pending">#F9A825</color>     <!-- Yellow -->
+    <color name="task_completed">#43A047</color>   <!-- Green -->
+    <color name="task_missed">#E53935</color>      <!-- Red -->
 </resources>

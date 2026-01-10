@@ -60,15 +60,12 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         // 🔹 Title
         holder.tvTitle.setText(task.getTitle());
 
-        // 🔹 Date & Time (safe)
+        // 🔹 Date & Time
         String dateTime = task.getFormattedDate();
         if (!task.getFormattedTime().isEmpty()) {
             dateTime += " • " + task.getFormattedTime();
         }
         holder.tvTaskTime.setText(dateTime);
-
-        // 🔹 Status text
-        holder.tvStatus.setText(task.getStatus());
 
         // 🔹 Priority badge
         String priority = task.getPriority();
@@ -83,7 +80,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.tvPriority.setBackgroundResource(R.drawable.bg_priority_low);
         }
 
-        // 🔹 Prevent checkbox recycling issue
+        // 🔹 Reset checkbox listener
         holder.cbTaskCompleted.setOnCheckedChangeListener(null);
         holder.cbTaskCompleted.setChecked(
                 "Completed".equalsIgnoreCase(task.getStatus())
@@ -96,13 +93,48 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             }
         });
 
-        // 🔹 Click → open TaskDetailActivity
+        // 🔹 Click → details
         holder.itemView.setOnClickListener(v -> {
             if (clickListener != null) {
                 clickListener.onTaskClick(task);
             }
         });
+
+        // ================= STATUS UI =================
+
+        if ("Missed".equalsIgnoreCase(task.getStatus())) {
+
+            holder.tvStatus.setText("Missed");
+            holder.tvStatus.setTextColor(
+                    context.getResources().getColor(R.color.task_missed)
+            );
+
+            // 🔥 IMPORTANT CHANGE
+            holder.cbTaskCompleted.setEnabled(true);   // ALLOW RECOVERY
+            holder.itemView.setAlpha(0.6f);
+
+        } else if ("Completed".equalsIgnoreCase(task.getStatus())) {
+
+            holder.tvStatus.setText("Completed");
+            holder.tvStatus.setTextColor(
+                    context.getResources().getColor(R.color.task_completed)
+            );
+
+            holder.cbTaskCompleted.setEnabled(true);
+            holder.itemView.setAlpha(1f);
+
+        } else {
+
+            holder.tvStatus.setText("Pending");
+            holder.tvStatus.setTextColor(
+                    context.getResources().getColor(R.color.task_pending)
+            );
+
+            holder.cbTaskCompleted.setEnabled(true);
+            holder.itemView.setAlpha(1f);
+        }
     }
+
 
     @Override
     public int getItemCount() {

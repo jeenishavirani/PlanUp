@@ -1,28 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F6F1FF"
     android:fillViewport="true">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:paddingBottom="32dp">
 
         <!-- 🟣 HEADER -->
         <LinearLayout
-            android:id="@+id/layoutHeader"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="200dp"
             android:background="@drawable/bg_header"
             android:orientation="vertical"
-            android:padding="20dp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            android:gravity="center"
+            android:padding="20dp">
 
             <TextView
                 android:layout_height="wrap_content"
@@ -30,102 +27,100 @@
                 android:text="Your Progress 📊"
                 android:textSize="28sp"
                 android:textStyle="bold"
-                android:layout_marginTop="30dp"
-                android:textColor="#050505"
-                android:layout_gravity="center"/>
+                android:textColor="#050505"/>
 
             <TextView
                 android:layout_height="wrap_content"
                 android:layout_width="wrap_content"
-                android:text="Track your productivity \njourney"
-                android:gravity="center"
+                android:text="Track your productivity journey"
                 android:textSize="16sp"
                 android:textColor="#333333"
-                android:layout_marginTop="6dp"
-                android:layout_gravity="center"/>
+                android:gravity="center"/>
         </LinearLayout>
 
-        <!-- 🟣 SUMMARY CARDS -->
-        <GridLayout
-            android:id="@+id/gridSummary"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:columnCount="2"
-            android:rowCount="2"
-            android:layout_margin="16dp"
-            app:layout_constraintTop_toBottomOf="@id/layoutHeader"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
-
-            <!-- Total Tasks -->
-            <TextView
-                android:text="Total Tasks\n0"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:background="@drawable/bg_white_card"
-                android:padding="24dp"/>
-
-            <!-- Completed -->
-            <TextView
-                android:text="Completed\n0"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:background="@drawable/bg_white_card"
-                android:padding="24dp"/>
-
-            <!-- Missed -->
-            <TextView
-                android:text="Missed\n0"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:background="@drawable/bg_white_card"
-                android:padding="24dp"/>
-
-            <!-- Streak -->
-            <TextView
-                android:text="Current Streak 🔥\n0 days"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:gravity="center"
-                android:background="@drawable/bg_white_card"
-                android:padding="24dp"/>
-        </GridLayout>
-
-        <!-- 🟣 CHART PLACEHOLDER -->
+        <!-- 🟣 SUMMARY ROW 1 -->
         <LinearLayout
-            android:id="@+id/layoutChart"
-            android:layout_width="0dp"
-            android:layout_height="200dp"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_white_card"
-            android:gravity="center"
-            app:layout_constraintTop_toBottomOf="@id/gridSummary"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:weightSum="2">
 
             <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Total Tasks\n0"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:padding="24dp"
+                android:background="@drawable/bg_white_card"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Completed\n0"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:padding="24dp"
+                android:background="@drawable/bg_white_card"/>
+        </LinearLayout>
+
+        <!-- 🟣 SUMMARY ROW 2 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:weightSum="2">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Missed\n0"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:padding="24dp"
+                android:background="@drawable/bg_white_card"/>
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Streak 🔥\n0 days"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:padding="24dp"
+                android:background="@drawable/bg_white_card"/>
+        </LinearLayout>
+
+        <!-- 🟣 CHART -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_margin="16dp"
+            android:background="@drawable/bg_white_card"
+            android:gravity="center">
+
+            <TextView
+                android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
                 android:text="📈 Completion Chart\n(Coming Soon)"
-                android:textSize="16sp"
                 android:textColor="#777777"
                 android:gravity="center"/>
         </LinearLayout>
 
         <!-- 🟣 MOTIVATION -->
         <TextView
-            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
             android:layout_margin="16dp"
             android:text="Consistency beats intensity. Keep going 💪"
-            android:textSize="16sp"
             android:textStyle="italic"
             android:textColor="#555555"
-            android:gravity="center"
-            app:layout_constraintTop_toBottomOf="@id/layoutChart"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+            android:gravity="center"/>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
 </androidx.core.widget.NestedScrollView>

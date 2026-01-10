@@ -1,5 +1,7 @@
 package com.example.planup;
 
+import java.util.Date;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -164,22 +166,52 @@ public class HomeFragment extends Fragment
 
                     if (querySnapshot == null) return;
 
-                    taskList.clear();
+                            taskList.clear();
 
-                    int pending = 0;
-                    int completed = 0;
+                            int pending = 0;
+                            int completed = 0;
+                            int missed = 0;
 
-                    for (QueryDocumentSnapshot doc : querySnapshot) {
-                        TaskModel task = doc.toObject(TaskModel.class);
-                        task.setId(doc.getId());
-                        taskList.add(task);
+                            Date today = new Date();
 
-                        if ("Completed".equalsIgnoreCase(task.getStatus())) {
-                            completed++;
-                        } else {
-                            pending++;
-                        }
-                    }
+                            for (QueryDocumentSnapshot doc : querySnapshot) {
+
+                                TaskModel task = doc.toObject(TaskModel.class);
+                                task.setId(doc.getId());
+
+                                // 🔥 AUTO-MISS LOGIC
+                                if (task.isMissed() && !"Missed".equalsIgnoreCase(task.getStatus())) {
+                                    task.setStatus("Missed");
+
+                                    db.collection("users")
+                                            .document(uid)
+                                            .collection("tasks")
+                                            .document(task.getId())
+                                            .update("status", "Missed");
+                                }
+
+                                // 🔥 HIDE COMPLETED TASKS FROM PREVIOUS DAYS
+                                if ("Completed".equalsIgnoreCase(task.getStatus())
+                                        || "Completed Late".equalsIgnoreCase(task.getStatus())) {
+
+                                    if (task.getDueDate() != null && task.getDueDate().before(today)) {
+                                        continue; // ❌ DO NOT ADD TO LIST
+                                    }
+                                }
+
+                                // 🔹 ADD TO LIST
+                                taskList.add(task);
+
+                                // 🔹 COUNT STATS
+                                if ("Completed".equalsIgnoreCase(task.getStatus())
+                                        || "Completed Late".equalsIgnoreCase(task.getStatus())) {
+                                    completed++;
+                                } else if ("Missed".equalsIgnoreCase(task.getStatus())) {
+                                    missed++;
+                                } else {
+                                    pending++;
+                                }
+                            }
 
                     // Empty state
                     if (taskList.isEmpty()) {
@@ -198,6 +230,7 @@ public class HomeFragment extends Fragment
                     taskAdapter.notifyDataSetChanged();
                 });
     }
+
 
     // ================= STATUS CHANGE =================
     @Override
