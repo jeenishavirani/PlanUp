@@ -19,29 +19,29 @@
         <!-- App Logo -->
         <ImageView
             android:id="@+id/imgLogo"
-            android:layout_width="140dp"
-            android:layout_height="140dp"
-            android:src="@drawable/logo_planup"
-            android:scaleType="fitCenter"
-            android:contentDescription="PlanUp Logo" />
+            android:layout_width="144dp"
+            android:layout_height="148dp"
+            android:contentDescription="PlanUp Logo"
+            android:src="@drawable/logo_planup" />
 
         <!-- App Name -->
         <TextView
             android:id="@+id/txtAppName"
-            style="@style/AppText.Header"
-            android:layout_marginTop="16dp"
-            android:text="PlanUp"
-            android:textColor="@color/primaryColor"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="PlanUp"
+            android:textColor="#230C59"
+            android:textSize="32sp"
+            android:textStyle="bold" />
 
         <!-- Tagline -->
         <TextView
             android:id="@+id/txtTagline"
-            style="@style/AppText.Subtitle"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="6dp"
             android:text="Plan smart. Live better."
-            android:textColor="@color/secondaryColor"
+            android:textSize="14sp"
+            android:textColor="#EDE7FF"
             android:alpha="0.85"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
