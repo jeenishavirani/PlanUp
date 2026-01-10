@@ -111,13 +111,14 @@
 
         <!-- 🟣 MOTIVATION -->
         <TextView
+            android:id="@+id/tvMotivation"
             android:layout_height="wrap_content"
             android:layout_width="match_parent"
             android:layout_margin="16dp"
-            android:text="Consistency beats intensity. Keep going 💪"
             android:textStyle="italic"
             android:textColor="#555555"
             android:gravity="center"/>
+
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

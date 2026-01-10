@@ -17,21 +17,36 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 public class StatsFragment extends Fragment {
 
     private LineChart lineChart;
-    private TextView tvTotalTasks, tvCompleted, tvMissed, tvStreak;
+    private TextView tvTotalTasks, tvCompleted, tvMissed, tvStreak, tvMotivation;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+
+    // 🔥 Motivation lines
+    private final String[] motivationQuotes = {
+            "Consistency beats intensity. Keep going 💪",
+            "Small steps every day lead to big results 🌱",
+            "Progress, not perfection ✨",
+            "Even slow progress is still progress 🚶‍♂️",
+            "You showed up today. That matters 🙌",
+            "Discipline today, success tomorrow 🔥",
+            "Your future self will thank you 💜",
+            "One task at a time. You’ve got this 💯",
+            "Stay focused. Stay consistent 🎯",
+            "Every completed task is a win 🏆"
+    };
 
     @Nullable
     @Override
@@ -42,20 +57,33 @@ public class StatsFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_stats, container, false);
 
+        // 🔹 Views
         lineChart = view.findViewById(R.id.lineChart);
         tvTotalTasks = view.findViewById(R.id.tvTotalTasks);
         tvCompleted = view.findViewById(R.id.tvCompleted);
         tvMissed = view.findViewById(R.id.tvMissed);
         tvStreak = view.findViewById(R.id.tvStreak);
+        tvMotivation = view.findViewById(R.id.tvMotivation);
 
+        // 🔹 Firebase
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
+        setRandomMotivation();
         loadStats();
 
         return view;
     }
 
+    // ================= MOTIVATION =================
+    private void setRandomMotivation() {
+        Random random = new Random();
+        tvMotivation.setText(
+                motivationQuotes[random.nextInt(motivationQuotes.length)]
+        );
+    }
+
+    // ================= STATS + CHART =================
     private void loadStats() {
 
         if (mAuth.getCurrentUser() == null) return;
@@ -79,11 +107,9 @@ public class StatsFragment extends Fragment {
                     int[] weeklyCompleted = new int[7];
                     int[] weeklyMissed = new int[7];
 
-                    List<com.google.firebase.firestore.DocumentSnapshot> docs = snapshot.getDocuments();
+                    List<DocumentSnapshot> docs = snapshot.getDocuments();
 
-
-
-                    // 🔥 SORT BY COMPLETION TIME (latest first)
+                    // 🔥 Sort by due date (latest first)
                     docs.sort((a, b) -> {
                         Date da = a.getDate("dueDate");
                         Date db = b.getDate("dueDate");
@@ -93,15 +119,16 @@ public class StatsFragment extends Fragment {
 
                     boolean streakBroken = false;
 
-                    for (com.google.firebase.firestore.DocumentSnapshot doc : docs) {
-
+                    for (DocumentSnapshot doc : docs) {
 
                         total++;
 
                         String status = doc.getString("status");
                         Date dueDate = doc.getDate("dueDate");
 
-                        // ----- STREAK LOGIC -----
+                        if (status == null) continue;
+
+                        // 🔥 STREAK LOGIC
                         if (!streakBroken) {
                             if ("Completed".equalsIgnoreCase(status)
                                     || "Completed Late".equalsIgnoreCase(status)) {
@@ -111,7 +138,7 @@ public class StatsFragment extends Fragment {
                             }
                         }
 
-                        // ----- COUNTS -----
+                        // 🔹 COUNTS
                         if ("Completed".equalsIgnoreCase(status)
                                 || "Completed Late".equalsIgnoreCase(status)) {
                             completedCount++;
@@ -119,11 +146,13 @@ public class StatsFragment extends Fragment {
                             missedCount++;
                         }
 
-                        // ----- WEEKLY CHART -----
+                        // 🔹 WEEKLY CHART
                         if (dueDate == null || dueDate.before(startDate)) continue;
 
-                        int dayIndex = 6 - (int) ((new Date().getTime() - dueDate.getTime())
-                                / (1000 * 60 * 60 * 24));
+                        int dayIndex = 6 - (int) (
+                                (new Date().getTime() - dueDate.getTime())
+                                        / (1000 * 60 * 60 * 24)
+                        );
 
                         if (dayIndex < 0 || dayIndex > 6) continue;
 
@@ -145,6 +174,7 @@ public class StatsFragment extends Fragment {
                 });
     }
 
+    // ================= CHART =================
     private void drawChart(int[] completed, int[] missed) {
 
         List<Entry> completedEntries = new ArrayList<>();
