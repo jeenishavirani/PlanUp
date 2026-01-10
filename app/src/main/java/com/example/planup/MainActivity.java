@@ -1,222 +1,56 @@
 package com.example.planup;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.View;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.fragment.app.Fragment;
 
-import com.example.planup.adapter.TaskAdapter;
-import com.example.planup.model.TaskModel;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
-import java.util.ArrayList;
-import java.util.List;
+public class MainActivity extends AppCompatActivity {
 
-public class MainActivity extends AppCompatActivity
-        implements TaskAdapter.OnTaskStatusChangeListener {
-
-    private static final String TAG = "MainActivity";
-
-    // UI
-    ImageView imgProfile, fabAddTask;
-    TextView tvWelcome, tvPendingTasks, tvCompletedTasks, tvTotalTasks;
-    RecyclerView rvTasks;
-    LinearLayout layoutEmpty;
-
-    // Firebase
-    FirebaseAuth mAuth;
-    FirebaseFirestore db;
-    ListenerRegistration taskListener;
-
-    // Adapter
-    List<TaskModel> taskList;
-    TaskAdapter taskAdapter;
+    BottomNavigationView bottomNav;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // 🔹 Views
-        imgProfile = findViewById(R.id.imgProfile);
-        fabAddTask = findViewById(R.id.fabAddTask);
-        tvWelcome = findViewById(R.id.tvWelcome);
-        rvTasks = findViewById(R.id.rvTasks);
-        layoutEmpty = findViewById(R.id.layoutEmpty);
+        bottomNav = findViewById(R.id.bottomNavigation);
 
-        tvPendingTasks = findViewById(R.id.tvPendingTasks);
-        tvCompletedTasks = findViewById(R.id.tvCompletedTasks);
-        tvTotalTasks = findViewById(R.id.tvTotalTasks);
-
-        // 🔹 Firebase
-        mAuth = FirebaseAuth.getInstance();
-        db = FirebaseFirestore.getInstance();
-
-        // 🔹 RecyclerView
-        taskList = new ArrayList<>();
-        rvTasks.setLayoutManager(new LinearLayoutManager(this));
-
-        taskAdapter = new TaskAdapter(
-                this,
-                taskList,
-                task -> {
-                    // 🔜 Open TaskDetailActivity
-                    Intent intent = new Intent(MainActivity.this, TaskDetailActivity.class);
-                    intent.putExtra("taskId", task.getId());
-                    startActivity(intent);
-                },
-                this
-        );
-
-        rvTasks.setAdapter(taskAdapter);
-
-        // 🔹 Load user info
-        loadUserData();
-
-        // 🔹 Clicks
-        imgProfile.setOnClickListener(v ->
-                startActivity(new Intent(this, ProfileActivity.class)));
-
-        fabAddTask.setOnClickListener(v ->
-                startActivity(new Intent(this, AddTaskActivity.class)));
-    }
-
-    // ================= USER DATA =================
-    private void loadUserData() {
-
-        if (mAuth.getCurrentUser() == null) return;
-
-        String uid = mAuth.getCurrentUser().getUid();
-
-        db.collection("users")
-                .document(uid)
-                .get()
-                .addOnSuccessListener(doc -> {
-
-                    if (!doc.exists()) return;
-
-                    String nickname = doc.getString("nickname");
-                    String gender = doc.getString("gender");
-
-                    if (nickname != null) {
-                        tvWelcome.setText("Welcome 👋\n" + nickname);
-                    }
-
-                    if ("female".equalsIgnoreCase(gender)) {
-                        imgProfile.setImageResource(R.drawable.ic_avatar_girl);
-                    } else {
-                        imgProfile.setImageResource(R.drawable.ic_avatar_boy);
-                    }
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to load user data", Toast.LENGTH_SHORT).show()
-                );
-    }
-
-    // ================= TASK LIST =================
-    private void attachTaskListener() {
-
-        if (mAuth.getCurrentUser() == null) return;
-
-        String uid = mAuth.getCurrentUser().getUid();
-
-        if (taskListener != null) {
-            taskListener.remove();
+        // Default fragment
+        if (savedInstanceState == null) {
+            loadFragment(new HomeFragment());
+            bottomNav.setSelectedItemId(R.id.nav_home);
         }
 
-        taskListener = db.collection("users")
-                .document(uid)
-                .collection("tasks")
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .addSnapshotListener((querySnapshot, e) -> {
+        bottomNav.setOnItemSelectedListener(item -> {
 
-                    if (e != null) {
-                        Log.e(TAG, "Task listener error", e);
-                        return;
-                    }
+            Fragment fragment = null;
 
-                    if (querySnapshot == null) return;
+            if (item.getItemId() == R.id.nav_home) {
+                fragment = new HomeFragment();
+            } else if (item.getItemId() == R.id.nav_tasks) {
+                fragment = new TasksFragment(); // next step
+            } else if (item.getItemId() == R.id.nav_stats) {
+                fragment = new StatsFragment(); // next step
+            } else if (item.getItemId() == R.id.nav_ai) {
+                fragment = new AIAssistantFragment(); // existing
+            }
 
-                    taskList.clear();
+            if (fragment != null) {
+                loadFragment(fragment);
+                return true;
+            }
 
-                    int pending = 0;
-                    int completed = 0;
-
-                    for (QueryDocumentSnapshot doc : querySnapshot) {
-                        TaskModel task = doc.toObject(TaskModel.class);
-                        task.setId(doc.getId());
-                        taskList.add(task);
-
-                        if ("Completed".equalsIgnoreCase(task.getStatus())) {
-                            completed++;
-                        } else {
-                            pending++;
-                        }
-                    }
-
-                    // Empty state
-                    if (taskList.isEmpty()) {
-                        layoutEmpty.setVisibility(View.VISIBLE);
-                        rvTasks.setVisibility(View.GONE);
-                    } else {
-                        layoutEmpty.setVisibility(View.GONE);
-                        rvTasks.setVisibility(View.VISIBLE);
-                    }
-
-                    // Stats
-                    tvPendingTasks.setText("Pending: " + pending);
-                    tvCompletedTasks.setText("Completed: " + completed);
-                    tvTotalTasks.setText("Total: " + taskList.size());
-
-                    taskAdapter.notifyDataSetChanged();
-                });
+            return false;
+        });
     }
 
-    // ================= STATUS CHANGE =================
-    @Override
-    public void onTaskStatusChanged(TaskModel task, boolean isCompleted) {
-
-        if (mAuth.getCurrentUser() == null) return;
-
-        String uid = mAuth.getCurrentUser().getUid();
-
-        db.collection("users")
-                .document(uid)
-                .collection("tasks")
-                .document(task.getId())
-                .update("status", isCompleted ? "Completed" : "Pending")
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to update task", Toast.LENGTH_SHORT).show()
-                );
-    }
-
-    // ================= LIFECYCLE =================
-    @Override
-    protected void onStart() {
-        super.onStart();
-        attachTaskListener();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (taskListener != null) {
-            taskListener.remove();
-            taskListener = null;
-        }
+    private void loadFragment(Fragment fragment) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.fragmentContainer, fragment)
+                .commit();
     }
 }

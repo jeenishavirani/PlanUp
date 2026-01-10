@@ -1,5 +1,6 @@
 package com.example.planup;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
@@ -13,11 +14,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 public class TaskDetailActivity extends AppCompatActivity {
 
-    // UI
     private TextView tvTitle, tvTaskDesc, tvDate, tvTime, tvPriority, tvAlarm;
-    private Button btnEdit, btnDelete;
+    private Button btnEditTask, btnDeleteTask;
 
-    // Firebase
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
@@ -28,11 +27,9 @@ public class TaskDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_task_detail);
 
-        // Firebase
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        // Get taskId from intent
         taskId = getIntent().getStringExtra("taskId");
         if (taskId == null) {
             Toast.makeText(this, "Task not found", Toast.LENGTH_SHORT).show();
@@ -40,7 +37,6 @@ public class TaskDetailActivity extends AppCompatActivity {
             return;
         }
 
-        // Bind views
         tvTitle = findViewById(R.id.tvTaskTitle);
         tvTaskDesc = findViewById(R.id.tvTaskDesc);
         tvDate = findViewById(R.id.tvTaskDate);
@@ -48,12 +44,28 @@ public class TaskDetailActivity extends AppCompatActivity {
         tvPriority = findViewById(R.id.tvTaskPriority);
         tvAlarm = findViewById(R.id.tvTaskAlarm);
 
-        btnEdit = findViewById(R.id.btnEditTask);
-        btnDelete = findViewById(R.id.btnDeleteTask);
+        btnEditTask = findViewById(R.id.btnEditTask);
+        btnDeleteTask = findViewById(R.id.btnDeleteTask);
 
         loadTask();
 
-        btnDelete.setOnClickListener(v -> deleteTask());
+        btnEditTask.setOnClickListener(v -> {
+            Intent intent = new Intent(this, EditTaskActivity.class);
+            intent.putExtra("taskId", taskId);
+            startActivityForResult(intent, 101);
+        });
+
+        btnDeleteTask.setOnClickListener(v -> deleteTask());
+    }
+
+    // 🔁 RESULT FROM EDIT SCREEN
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == 101 && resultCode == RESULT_OK) {
+            loadTask(); // 🔥 reload updated data
+        }
     }
 
     private void loadTask() {
