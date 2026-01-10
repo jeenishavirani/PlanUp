@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "886788079764",
+    "project_id": "planup-a80e4",
+    "storage_bucket": "planup-a80e4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:886788079764:android:d7721b94045685730ab481",
+        "android_client_info": {
+          "package_name": "com.example.planup"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeCq4uhUmtaWVLi47JkpYp2INoN27QTmU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
