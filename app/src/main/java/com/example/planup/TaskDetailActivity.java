@@ -1,11 +1,10 @@
 package com.example.planup;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.content.Intent;
-
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -15,11 +14,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 public class TaskDetailActivity extends AppCompatActivity {
 
-    // UI
     private TextView tvTitle, tvTaskDesc, tvDate, tvTime, tvPriority, tvAlarm;
     private Button btnEditTask, btnDeleteTask;
 
-    // Firebase
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
@@ -53,14 +50,23 @@ public class TaskDetailActivity extends AppCompatActivity {
         loadTask();
 
         btnEditTask.setOnClickListener(v -> {
-            Intent intent = new Intent(TaskDetailActivity.this, EditTaskActivity.class);
+            Intent intent = new Intent(this, EditTaskActivity.class);
             intent.putExtra("taskId", taskId);
-            startActivity(intent);
+            startActivityForResult(intent, 101);
         });
 
         btnDeleteTask.setOnClickListener(v -> deleteTask());
     }
 
+    // 🔁 RESULT FROM EDIT SCREEN
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == 101 && resultCode == RESULT_OK) {
+            loadTask(); // 🔥 reload updated data
+        }
+    }
 
     private void loadTask() {
 
