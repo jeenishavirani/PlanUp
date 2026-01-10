@@ -15,8 +15,6 @@ import android.provider.Settings;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
-import android.widget.RadioGroup;
-import android.widget.Switch;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -25,6 +23,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.planup.model.TaskModel;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -36,9 +37,9 @@ import java.util.Locale;
 public class AddTaskActivity extends AppCompatActivity {
 
     EditText etTaskTitle, etTaskDesc;
-    RadioGroup rgPriority;
-    Switch switchAlarm;
-    Button btnSaveTask, btnDate, btnTime;
+    MaterialButtonToggleGroup togglePriority;
+    MaterialSwitch switchAlarm;
+    MaterialButton btnSaveTask, btnDate, btnTime;
 
     FirebaseAuth mAuth;
     FirebaseFirestore db;
@@ -65,7 +66,7 @@ public class AddTaskActivity extends AppCompatActivity {
 
         etTaskTitle = findViewById(R.id.etTaskTitle);
         etTaskDesc = findViewById(R.id.etTaskDesc);
-        rgPriority = findViewById(R.id.rgPriority);
+        togglePriority = findViewById(R.id.togglePriority);
         switchAlarm = findViewById(R.id.switchAlarm);
         btnSaveTask = findViewById(R.id.btnSaveTask);
         btnDate = findViewById(R.id.btnDate);
@@ -119,17 +120,17 @@ public class AddTaskActivity extends AppCompatActivity {
             return;
         }
 
-        if (date.equals("Select Date")) {
+        if (date.equals("Date")) {
             Toast.makeText(this, "Please select a date", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (time.equals("Select Time")) {
+        if (time.equals("Time")) {
             Toast.makeText(this, "Please select a time", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (rgPriority.getCheckedRadioButtonId() == -1) {
+        if (togglePriority.getCheckedButtonId() == -1) {
             Toast.makeText(this, "Please select a priority", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -167,9 +168,9 @@ public class AddTaskActivity extends AppCompatActivity {
     }
 
     private String getPriority() {
-        int selectedId = rgPriority.getCheckedRadioButtonId();
-        RadioButton selectedRadioButton = findViewById(selectedId);
-        return selectedRadioButton.getText().toString();
+        int selectedId = togglePriority.getCheckedButtonId();
+        MaterialButton selectedButton = findViewById(selectedId);
+        return selectedButton.getText().toString();
     }
 
     private void checkAndScheduleAlarm(String taskId, String taskTitle) {

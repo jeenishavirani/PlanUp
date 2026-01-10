@@ -3,7 +3,21 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
+    <color name="primaryColor">#230C59</color>
+    <color name="primaryLightColor">#8E7CC3</color>
+    <color name="primaryDarkColor">#1A0844</color>
+    <color name="secondaryColor">#EDE7FF</color>
+    
+    <color name="headerStartColor">#9B6EF3</color>
+    <color name="headerEndColor">#8A5BEF</color>
+    
+    <color name="textColorPrimary">#230C59</color>
+    <color name="textColorSecondary">#616161</color>
+    <color name="hintColor">#9E9E9E</color>
+
     <color name="task_pending">#F9A825</color>     <!-- Yellow -->
     <color name="task_completed">#43A047</color>   <!-- Green -->
     <color name="task_missed">#E53935</color>      <!-- Red -->
+    
+    <color name="background_light">#F5F5F5</color>
 </resources>

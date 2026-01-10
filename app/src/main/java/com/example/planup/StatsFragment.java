@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,14 +20,19 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 public class StatsFragment extends Fragment {
 
     private LineChart lineChart;
+    private TextView tvTotalCount, tvCompletedCount, tvMissedCount, tvStreakCount;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
 
@@ -40,24 +46,33 @@ public class StatsFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_stats, container, false);
 
         lineChart = view.findViewById(R.id.lineChart);
+        tvTotalCount = view.findViewById(R.id.tvTotalCount);
+        tvCompletedCount = view.findViewById(R.id.tvCompletedCount);
+        tvMissedCount = view.findViewById(R.id.tvMissedCount);
+        tvStreakCount = view.findViewById(R.id.tvStreakCount);
+
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        loadWeeklyStats();
+        loadStats();
 
         return view;
     }
 
-    private void loadWeeklyStats() {
-
+    private void loadStats() {
         if (mAuth.getCurrentUser() == null) return;
 
         String uid = mAuth.getCurrentUser().getUid();
 
-        // Last 7 days
         Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        Date today = cal.getTime();
+
         cal.add(Calendar.DAY_OF_YEAR, -6);
-        Date startDate = cal.getTime();
+        Date chartStartDate = cal.getTime();
 
         db.collection("users")
                 .document(uid)
@@ -65,37 +80,94 @@ public class StatsFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
 
-                    int[] completed = new int[7];
-                    int[] missed = new int[7];
+                    int totalTasks = querySnapshot.size();
+                    int totalCompleted = 0;
+                    int totalMissed = 0;
+
+                    int[] completedByDay = new int[7];
+                    int[] missedByDay = new int[7];
+                    
+                    Set<String> completedDates = new HashSet<>();
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
 
                     for (QueryDocumentSnapshot doc : querySnapshot) {
-
                         Date dueDate = doc.getDate("dueDate");
                         String status = doc.getString("status");
 
-                        if (dueDate == null || status == null) continue;
-                        if (dueDate.before(startDate)) continue;
+                        if (status == null) continue;
 
-                        Calendar taskCal = Calendar.getInstance();
-                        taskCal.setTime(dueDate);
-
-                        int dayIndex = 6 - (int) ((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-                        if (dayIndex < 0 || dayIndex > 6) continue;
-
-                        if ("Completed".equalsIgnoreCase(status)
-                                || "Completed Late".equalsIgnoreCase(status)) {
-                            completed[dayIndex]++;
+                        boolean isDone = "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
+                        
+                        if (isDone) {
+                            totalCompleted++;
+                            if (dueDate != null) {
+                                completedDates.add(sdf.format(dueDate));
+                            }
                         } else if ("Missed".equalsIgnoreCase(status)) {
-                            missed[dayIndex]++;
+                            totalMissed++;
+                        }
+
+                        if (dueDate == null) continue;
+
+                        // Chart logic (last 7 days)
+                        if (!dueDate.before(chartStartDate) && !dueDate.after(new Date())) {
+                            long diff = dueDate.getTime() - chartStartDate.getTime();
+                            int dayIndex = (int) (diff / (1000 * 60 * 60 * 24));
+                            
+                            if (dayIndex >= 0 && dayIndex < 7) {
+                                if (isDone) {
+                                    completedByDay[dayIndex]++;
+                                } else if ("Missed".equalsIgnoreCase(status)) {
+                                    missedByDay[dayIndex]++;
+                                }
+                            }
                         }
                     }
 
-                    drawChart(completed, missed);
+                    // Calculate Streak
+                    int streak = calculateStreak(completedDates);
+
+                    // Update UI
+                    tvTotalCount.setText(String.valueOf(totalTasks));
+                    tvCompletedCount.setText(String.valueOf(totalCompleted));
+                    tvMissedCount.setText(String.valueOf(totalMissed));
+                    tvStreakCount.setText(String.valueOf(streak));
+
+                    drawChart(completedByDay, missedByDay);
                 });
     }
 
-    private void drawChart(int[] completed, int[] missed) {
+    private int calculateStreak(Set<String> completedDates) {
+        int streak = 0;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
+        Calendar cal = Calendar.getInstance();
+        
+        // Start checking from today
+        String todayStr = sdf.format(cal.getTime());
+        
+        // If nothing today, check if streak continued from yesterday
+        if (!completedDates.contains(todayStr)) {
+            cal.add(Calendar.DAY_OF_YEAR, -1);
+            String yesterdayStr = sdf.format(cal.getTime());
+            if (!completedDates.contains(yesterdayStr)) {
+                return 0; // Streak broken
+            }
+        } else {
+            // Today has completions, count it and then check previous days
+            streak++;
+            cal.add(Calendar.DAY_OF_YEAR, -1);
+        }
 
+        // Count backwards
+        while (completedDates.contains(sdf.format(cal.getTime()))) {
+            streak++;
+            cal.add(Calendar.DAY_OF_YEAR, -1);
+        }
+
+        return streak;
+    }
+
+    private void drawChart(int[] completed, int[] missed) {
         List<Entry> completedEntries = new ArrayList<>();
         List<Entry> missedEntries = new ArrayList<>();
 

@@ -28,21 +28,20 @@
         <!-- App Name -->
         <TextView
             android:id="@+id/txtAppName"
-            android:layout_marginTop="14dp"
+            style="@style/AppText.Header"
+            android:layout_marginTop="16dp"
             android:text="PlanUp"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:textColor="#230C59"
+            android:textColor="@color/primaryColor"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
 
         <!-- Tagline -->
         <TextView
             android:id="@+id/txtTagline"
-            android:layout_marginTop="6dp"
+            style="@style/AppText.Subtitle"
+            android:layout_marginTop="8dp"
             android:text="Plan smart. Live better."
-            android:textSize="14sp"
-            android:textColor="#EDE7FF"
+            android:textColor="@color/secondaryColor"
             android:alpha="0.85"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />

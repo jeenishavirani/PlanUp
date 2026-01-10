@@ -5,48 +5,44 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_auth_gradient"
+    android:background="@color/background_light"
     tools:context=".EditProfileActivity">
 
     <!-- Header -->
-
-    <!-- Card -->
-
     <LinearLayout
         android:id="@+id/header"
         android:layout_width="0dp"
-        android:layout_height="220dp"
+        android:layout_height="200dp"
         android:background="@drawable/bg_header"
         android:gravity="center"
         android:orientation="vertical"
+        android:paddingBottom="40dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
+            style="@style/AppText.Header"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Edit Profile"
-            android:textColor="@android:color/white"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            android:textColor="@color/white" />
 
         <TextView
+            style="@style/AppText.Subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="4dp"
             android:text="Update your personal details"
-            android:textColor="#EDE7F6"
-            android:textSize="14sp" />
+            android:textColor="#E0E0E0" />
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/editCard"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginEnd="20dp"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
         android:layout_marginTop="-40dp"
         android:padding="24dp"
         android:background="@drawable/bg_white_card"
@@ -55,54 +51,76 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <TextView
+            style="@style/AppText.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Full Name"
+            android:textStyle="bold"
+            android:textColor="@color/primaryColor"
+            android:layout_marginBottom="8dp"/>
+
         <EditText
             android:id="@+id/etFullName"
+            style="@style/AppEditText"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:padding="14dp"
             android:hint="Full Name"
-            android:background="@drawable/bg_input"/>
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            style="@style/AppText.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Nickname"
+            android:textStyle="bold"
+            android:textColor="@color/primaryColor"
+            android:layout_marginBottom="8dp"/>
 
         <EditText
             android:id="@+id/etNickname"
+            style="@style/AppEditText"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:padding="14dp"
-            android:layout_marginTop="14dp"
             android:hint="Nickname"
-            android:background="@drawable/bg_input"/>
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            style="@style/AppText.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gender"
+            android:textStyle="bold"
+            android:textColor="@color/primaryColor"
+            android:layout_marginBottom="8dp"/>
 
         <Spinner
             android:id="@+id/spGender"
+            style="@style/AppEditText"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="14dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:background="@drawable/bg_input"/>
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            style="@style/AppText.Body"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Email"
+            android:textStyle="bold"
+            android:textColor="@color/primaryColor"
+            android:layout_marginBottom="8dp"/>
 
         <EditText
             android:id="@+id/etEmail"
+            style="@style/AppEditText"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="48dp"
-            android:padding="14dp"
-            android:layout_marginTop="14dp"
             android:hint="Email"
-            android:enabled="false"
-            android:textColor="#666666"
-            android:background="@drawable/bg_input"/>
+            android:enabled="true"
+            android:textColor="@color/textColorPrimary"
+            android:layout_marginBottom="24dp"/>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSave"
+            style="@style/AppButton"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="24dp"
-            android:text="Save Changes"
-            android:background="@drawable/bg_button_purple"
-            android:textColor="@android:color/white"/>
+            android:text="Save Changes" />
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
