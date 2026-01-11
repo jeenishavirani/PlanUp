@@ -19,6 +19,11 @@
 
         <item name="android:datePickerDialogTheme">@style/DatePickerTheme</item>
         <item name="android:timePickerDialogTheme">@style/DatePickerTheme</item>
+
+        <item name="android:windowSoftInputMode">adjustResize</item>
+
+        <item name="colorPrimary">@color/primaryColor</item>
+        <item name="colorOnPrimary">@color/white</item>
     </style>
 
     <style name="Theme.PlanUp" parent="Base.Theme.PlanUp" />
@@ -92,5 +97,7 @@
         <item name="android:textColor">@color/textColorPrimary</item>
         <item name="android:textColorHint">@color/hintColor</item>
     </style>
+
+
 
 </resources>

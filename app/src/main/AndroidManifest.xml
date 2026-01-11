@@ -46,7 +46,8 @@
         </activity> <!-- Next Screen -->
         <activity
             android:name=".MainActivity"
-            android:exported="true" />
+            android:exported="true"
+            android:windowSoftInputMode="stateAlwaysHidden|adjustResize"/>
 
         <receiver
             android:name=".AlarmReceiver"
