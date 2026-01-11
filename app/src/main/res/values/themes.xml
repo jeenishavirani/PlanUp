@@ -1,9 +1,96 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme. -->
     <style name="Base.Theme.PlanUp" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/primaryColor</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/secondaryColor</item>
+        <item name="colorOnPrimaryContainer">@color/primaryColor</item>
+        
+        <item name="colorSecondary">@color/secondaryColor</item>
+        <item name="colorOnSecondary">@color/primaryColor</item>
+        
+        <item name="android:windowBackground">@color/background_light</item>
+        <item name="android:statusBarColor">@color/primaryDarkColor</item>
+        
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/textColorPrimary</item>
+        <item name="colorSurfaceVariant">@color/secondaryColor</item>
+        <item name="colorOnSurfaceVariant">@color/primaryColor</item>
+
+        <item name="android:datePickerDialogTheme">@style/DatePickerTheme</item>
+        <item name="android:timePickerDialogTheme">@style/DatePickerTheme</item>
     </style>
 
     <style name="Theme.PlanUp" parent="Base.Theme.PlanUp" />
+
+    <!-- Style for Date and Time Pickers -->
+    <style name="DatePickerTheme" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorPrimary">@color/primaryColor</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnSurface">@color/textColorPrimary</item>
+        <item name="colorAccent">@color/primaryColor</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/DialogButtonStyle</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/DialogButtonStyle</item>
+    </style>
+
+    <style name="DialogButtonStyle" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/primaryColor</item>
+    </style>
+
+    <style name="ShapeAppearance.App.Circle" parent="">
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <!-- Text Styles -->
+    <style name="AppText" parent="android:Widget.TextView">
+        <item name="android:textColor">@color/textColorPrimary</item>
+    </style>
+
+    <style name="AppText.Header" parent="AppText">
+        <item name="android:textSize">24sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="AppText.Subtitle" parent="AppText">
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/primaryLightColor</item>
+    </style>
+
+    <style name="AppText.Body" parent="AppText">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/textColorSecondary</item>
+    </style>
+
+    <!-- Button Styles -->
+    <style name="AppButton" parent="Widget.Material3.Button">
+        <item name="android:layout_height">52dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:background">@drawable/bg_button_gradient</item>
+        <item name="backgroundTint">@null</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <style name="AppButton.Secondary" parent="AppButton">
+        <item name="android:background">@color/secondaryColor</item>
+        <item name="backgroundTint">@color/secondaryColor</item>
+        <item name="android:textColor">@color/primaryColor</item>
+    </style>
+
+    <!-- Input Styles -->
+    <style name="AppEditText">
+        <item name="android:layout_height">52dp</item>
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:paddingLeft">16dp</item>
+        <item name="android:paddingRight">16dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/textColorPrimary</item>
+        <item name="android:textColorHint">@color/hintColor</item>
+    </style>
+
 </resources>

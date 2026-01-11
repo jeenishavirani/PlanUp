@@ -17,36 +17,24 @@ import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
+import java.util.Locale;
+import java.util.Set;
 
 public class StatsFragment extends Fragment {
 
     private LineChart lineChart;
-    private TextView tvTotalTasks, tvCompleted, tvMissed, tvStreak, tvMotivation;
-
+    private TextView tvTotalCount, tvCompletedCount, tvMissedCount, tvStreakCount;
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
-
-    // 🔥 Motivation lines
-    private final String[] motivationQuotes = {
-            "Consistency beats intensity. Keep going 💪",
-            "Small steps every day lead to big results 🌱",
-            "Progress, not perfection ✨",
-            "Even slow progress is still progress 🚶‍♂️",
-            "You showed up today. That matters 🙌",
-            "Discipline today, success tomorrow 🔥",
-            "Your future self will thank you 💜",
-            "One task at a time. You’ve got this 💯",
-            "Stay focused. Stay consistent 🎯",
-            "Every completed task is a win 🏆"
-    };
 
     @Nullable
     @Override
@@ -57,126 +45,129 @@ public class StatsFragment extends Fragment {
 
         View view = inflater.inflate(R.layout.fragment_stats, container, false);
 
-        // 🔹 Views
         lineChart = view.findViewById(R.id.lineChart);
-        tvTotalTasks = view.findViewById(R.id.tvTotalTasks);
-        tvCompleted = view.findViewById(R.id.tvCompleted);
-        tvMissed = view.findViewById(R.id.tvMissed);
-        tvStreak = view.findViewById(R.id.tvStreak);
-        tvMotivation = view.findViewById(R.id.tvMotivation);
+        tvTotalCount = view.findViewById(R.id.tvTotalCount);
+        tvCompletedCount = view.findViewById(R.id.tvCompletedCount);
+        tvMissedCount = view.findViewById(R.id.tvMissedCount);
+        tvStreakCount = view.findViewById(R.id.tvStreakCount);
 
-        // 🔹 Firebase
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        setRandomMotivation();
         loadStats();
 
         return view;
     }
 
-    // ================= MOTIVATION =================
-    private void setRandomMotivation() {
-        Random random = new Random();
-        tvMotivation.setText(
-                motivationQuotes[random.nextInt(motivationQuotes.length)]
-        );
-    }
-
-    // ================= STATS + CHART =================
     private void loadStats() {
-
         if (mAuth.getCurrentUser() == null) return;
+
         String uid = mAuth.getCurrentUser().getUid();
 
         Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        Date today = cal.getTime();
+
         cal.add(Calendar.DAY_OF_YEAR, -6);
-        Date startDate = cal.getTime();
+        Date chartStartDate = cal.getTime();
 
         db.collection("users")
                 .document(uid)
                 .collection("tasks")
                 .get()
-                .addOnSuccessListener(snapshot -> {
+                .addOnSuccessListener(querySnapshot -> {
 
-                    int total = 0;
-                    int completedCount = 0;
-                    int missedCount = 0;
-                    int streak = 0;
+                    int totalTasks = querySnapshot.size();
+                    int totalCompleted = 0;
+                    int totalMissed = 0;
 
-                    int[] weeklyCompleted = new int[7];
-                    int[] weeklyMissed = new int[7];
+                    int[] completedByDay = new int[7];
+                    int[] missedByDay = new int[7];
+                    
+                    Set<String> completedDates = new HashSet<>();
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
 
-                    List<DocumentSnapshot> docs = snapshot.getDocuments();
-
-                    // 🔥 Sort by due date (latest first)
-                    docs.sort((a, b) -> {
-                        Date da = a.getDate("dueDate");
-                        Date db = b.getDate("dueDate");
-                        if (da == null || db == null) return 0;
-                        return db.compareTo(da);
-                    });
-
-                    boolean streakBroken = false;
-
-                    for (DocumentSnapshot doc : docs) {
-
-                        total++;
-
-                        String status = doc.getString("status");
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
                         Date dueDate = doc.getDate("dueDate");
+                        String status = doc.getString("status");
 
                         if (status == null) continue;
 
-                        // 🔥 STREAK LOGIC
-                        if (!streakBroken) {
-                            if ("Completed".equalsIgnoreCase(status)
-                                    || "Completed Late".equalsIgnoreCase(status)) {
-                                streak++;
-                            } else if ("Missed".equalsIgnoreCase(status)) {
-                                streakBroken = true;
+                        boolean isDone = "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
+                        
+                        if (isDone) {
+                            totalCompleted++;
+                            if (dueDate != null) {
+                                completedDates.add(sdf.format(dueDate));
                             }
+                        } else if ("Missed".equalsIgnoreCase(status)) {
+                            totalMissed++;
                         }
 
-                        // 🔹 COUNTS
-                        if ("Completed".equalsIgnoreCase(status)
-                                || "Completed Late".equalsIgnoreCase(status)) {
-                            completedCount++;
-                        } else if ("Missed".equalsIgnoreCase(status)) {
-                            missedCount++;
-                        }
+                        if (dueDate == null) continue;
 
-                        // 🔹 WEEKLY CHART
-                        if (dueDate == null || dueDate.before(startDate)) continue;
-
-                        int dayIndex = 6 - (int) (
-                                (new Date().getTime() - dueDate.getTime())
-                                        / (1000 * 60 * 60 * 24)
-                        );
-
-                        if (dayIndex < 0 || dayIndex > 6) continue;
-
-                        if ("Completed".equalsIgnoreCase(status)
-                                || "Completed Late".equalsIgnoreCase(status)) {
-                            weeklyCompleted[dayIndex]++;
-                        } else if ("Missed".equalsIgnoreCase(status)) {
-                            weeklyMissed[dayIndex]++;
+                        // Chart logic (last 7 days)
+                        if (!dueDate.before(chartStartDate) && !dueDate.after(new Date())) {
+                            long diff = dueDate.getTime() - chartStartDate.getTime();
+                            int dayIndex = (int) (diff / (1000 * 60 * 60 * 24));
+                            
+                            if (dayIndex >= 0 && dayIndex < 7) {
+                                if (isDone) {
+                                    completedByDay[dayIndex]++;
+                                } else if ("Missed".equalsIgnoreCase(status)) {
+                                    missedByDay[dayIndex]++;
+                                }
+                            }
                         }
                     }
 
-                    // 🔹 UPDATE UI
-                    tvTotalTasks.setText("Total Tasks\n" + total);
-                    tvCompleted.setText("Completed\n" + completedCount);
-                    tvMissed.setText("Missed\n" + missedCount);
-                    tvStreak.setText("Streak 🔥\n" + streak + " tasks");
+                    // Calculate Streak
+                    int streak = calculateStreak(completedDates);
 
-                    drawChart(weeklyCompleted, weeklyMissed);
+                    // Update UI
+                    tvTotalCount.setText(String.valueOf(totalTasks));
+                    tvCompletedCount.setText(String.valueOf(totalCompleted));
+                    tvMissedCount.setText(String.valueOf(totalMissed));
+                    tvStreakCount.setText(String.valueOf(streak));
+
+                    drawChart(completedByDay, missedByDay);
                 });
     }
 
-    // ================= CHART =================
-    private void drawChart(int[] completed, int[] missed) {
+    private int calculateStreak(Set<String> completedDates) {
+        int streak = 0;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
+        Calendar cal = Calendar.getInstance();
+        
+        // Start checking from today
+        String todayStr = sdf.format(cal.getTime());
+        
+        // If nothing today, check if streak continued from yesterday
+        if (!completedDates.contains(todayStr)) {
+            cal.add(Calendar.DAY_OF_YEAR, -1);
+            String yesterdayStr = sdf.format(cal.getTime());
+            if (!completedDates.contains(yesterdayStr)) {
+                return 0; // Streak broken
+            }
+        } else {
+            // Today has completions, count it and then check previous days
+            streak++;
+            cal.add(Calendar.DAY_OF_YEAR, -1);
+        }
 
+        // Count backwards
+        while (completedDates.contains(sdf.format(cal.getTime()))) {
+            streak++;
+            cal.add(Calendar.DAY_OF_YEAR, -1);
+        }
+
+        return streak;
+    }
+
+    private void drawChart(int[] completed, int[] missed) {
         List<Entry> completedEntries = new ArrayList<>();
         List<Entry> missedEntries = new ArrayList<>();
 
