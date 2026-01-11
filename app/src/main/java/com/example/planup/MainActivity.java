@@ -4,6 +4,8 @@ import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+import com.example.planup.utils.NotificationHelper;
+
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
@@ -15,6 +17,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        ReminderScheduler.scheduleDailyMorningReminder(this);
+
+
 
         bottomNav = findViewById(R.id.bottomNavigation);
 
