@@ -1,34 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/main"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/background_light"
-    android:fitsSystemWindows="true">
+    android:layout_height="match_parent">
 
-    <!-- 🔹 FRAGMENT CONTAINER -->
+    <!-- Fragment container -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/fragmentContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+        android:layout_marginBottom="80dp" />
 
-    <!-- 🟣 BOTTOM NAVIGATION -->
+    <!-- Bottom navigation -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNavigation"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="80dp"
         android:layout_gravity="bottom"
         android:background="@drawable/bg_bottom_nav"
-        android:minHeight="80dp"
-        app:elevation="8dp"
-        app:itemRippleColor="@color/secondaryColor"
-        app:menu="@menu/menu_bottom_nav"
-        app:labelVisibilityMode="labeled"
-        app:itemIconSize="24dp"
-        app:itemIconTint="@color/white"
-        app:itemTextColor="@color/white" />
-
+        app:menu="@menu/menu_bottom_nav"/>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

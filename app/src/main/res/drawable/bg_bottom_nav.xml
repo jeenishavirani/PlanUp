@@ -6,6 +6,6 @@
         android:angle="270"/>
 
     <corners
-        android:topLeftRadius="36dp"
-        android:topRightRadius="36dp"/>
+        android:topLeftRadius="6dp"
+        android:topRightRadius="6dp"/>
 </shape>

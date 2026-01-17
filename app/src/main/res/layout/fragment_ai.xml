@@ -2,38 +2,43 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_light">
+    android:background="#F6F1FF">
 
-    <!-- 🔹 CHAT HEADER (Standardized to 180dp) -->
+    <!-- 🔹 CHAT HEADER -->
     <LinearLayout
         android:id="@+id/chatHeader"
         android:layout_width="0dp"
-        android:layout_height="180dp"
+        android:layout_height="94dp"
         android:background="@drawable/bg_header"
         android:gravity="center"
-        android:orientation="vertical"
-        android:paddingBottom="24dp"
+        android:paddingHorizontal="20dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <TextView
-            style="@style/AppText.Header"
+        <LinearLayout
+            android:orientation="vertical"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="AI Assistant 🤖"
-            android:textColor="@color/white"/>
+            android:gravity="center">
 
-        <TextView
-            style="@style/AppText.Subtitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Your smart planning partner"
-            android:textColor="#E0E0E0"/>
+            <TextView
+                android:text="AI Assistant 🤖"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/white"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <TextView
+                android:text="Your smart planning partner"
+                android:textSize="12sp"
+                android:textColor="#EDE7F6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
     </LinearLayout>
 
     <!-- 🔹 EMPTY STATE -->
@@ -52,16 +57,15 @@
             android:layout_width="190dp"
             android:layout_height="190dp"
             android:src="@drawable/ai_chat_illustration"
-            android:contentDescription="AI Assistant"
             android:alpha="0.9"/>
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:text="Ask me anything ✨"
             android:textSize="14sp"
             android:textColor="#888888"
-            android:layout_marginTop="12dp"/>
+            android:layout_marginTop="12dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
     </LinearLayout>
 
     <!-- 🔹 CHAT LIST -->
@@ -107,7 +111,7 @@
             android:background="@drawable/bg_send_button"
             android:padding="12dp"
             android:src="@android:drawable/ic_menu_send"
-            app:tint="@android:color/white"/>
+            android:tint="@android:color/white"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
