@@ -11,6 +11,8 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.planup.utils.NotificationHelper;
+import com.example.planup.utils.TaskCleanupHelper;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
@@ -23,8 +25,20 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        // 🧹 Cleanup old tasks (older than 1 week)
+        TaskCleanupHelper.cleanOldTasks();
+
         // 🔔 Notifications
         ReminderScheduler.scheduleDailyMorningReminder(this);
+
+        // 🔹 Show welcome notification only once when app opens
+        if (savedInstanceState == null) {
+            NotificationHelper.show(
+                    this,
+                    "PlanUp 💜",
+                    "You’re doing great. One task at a time."
+            );
+        }
 
         bottomNav = findViewById(R.id.bottomNavigation);
 

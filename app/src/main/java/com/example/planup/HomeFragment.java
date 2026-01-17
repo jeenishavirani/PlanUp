@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import com.example.planup.utils.NotificationHelper;
+import com.example.planup.utils.StreakManager;
 
 
 import androidx.annotation.NonNull;
@@ -26,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.planup.adapter.TaskAdapter;
 import com.example.planup.model.TaskModel;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -41,7 +43,8 @@ public class HomeFragment extends Fragment
     private static final String TAG = "HomeFragment";
 
     // UI
-    ImageView imgProfile, fabAddTask;
+    ImageView imgProfile;
+    FloatingActionButton fabAddTask;
     TextView tvWelcome, tvPendingTasks, tvCompletedTasks, tvTotalTasks;
     RecyclerView rvTasks;
     LinearLayout layoutEmpty;
@@ -50,6 +53,7 @@ public class HomeFragment extends Fragment
     FirebaseAuth mAuth;
     FirebaseFirestore db;
     ListenerRegistration taskListener;
+    ListenerRegistration userListener;
 
     // Adapter
     List<TaskModel> taskList;
@@ -67,13 +71,6 @@ public class HomeFragment extends Fragment
             @Nullable Bundle savedInstanceState) {
 
         View view = inflater.inflate(R.layout.fragment_home, container, false);
-
-        NotificationHelper.show(
-                requireContext(),
-                "PlanUp 💜",
-                "You’re doing great. One task at a time."
-        );
-
 
         // 🔹 Views
         imgProfile = view.findViewById(R.id.imgProfile);
@@ -107,9 +104,6 @@ public class HomeFragment extends Fragment
 
         rvTasks.setAdapter(taskAdapter);
 
-        // 🔹 Load user info
-        loadUserData();
-
         // 🔹 Clicks
         imgProfile.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), ProfileActivity.class)));
@@ -120,38 +114,40 @@ public class HomeFragment extends Fragment
         return view;
     }
 
-    // ================= USER DATA =================
-    private void loadUserData() {
+    // ================= USER DATA (REAL-TIME) =================
+    private void attachUserListener() {
 
         if (mAuth.getCurrentUser() == null) return;
 
         String uid = mAuth.getCurrentUser().getUid();
 
-        db.collection("users")
+        if (userListener != null) userListener.remove();
+
+        userListener = db.collection("users")
                 .document(uid)
-                .get()
-                .addOnSuccessListener(doc -> {
+                .addSnapshotListener((doc, e) -> {
 
-                    if (!doc.exists()) return;
-
-                    String nickname = doc.getString("nickname");
-                    String gender = doc.getString("gender");
-
-                    if (nickname != null) {
-                        tvWelcome.setText("Welcome 👋\n" + nickname);
+                    if (e != null) {
+                        Log.e(TAG, "User listener error", e);
+                        return;
                     }
 
-                    if ("female".equalsIgnoreCase(gender)) {
-                        imgProfile.setImageResource(R.drawable.ic_avatar_girl);
-                    } else {
-                        imgProfile.setImageResource(R.drawable.ic_avatar_boy);
+                    if (doc != null && doc.exists()) {
+
+                        String nickname = doc.getString("nickname");
+                        String gender = doc.getString("gender");
+
+                        if (nickname != null) {
+                            tvWelcome.setText("Welcome 👋\n" + nickname);
+                        }
+
+                        if ("female".equalsIgnoreCase(gender)) {
+                            imgProfile.setImageResource(R.drawable.ic_avatar_girl);
+                        } else {
+                            imgProfile.setImageResource(R.drawable.ic_avatar_boy);
+                        }
                     }
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(requireContext(),
-                                "Failed to load user data",
-                                Toast.LENGTH_SHORT).show()
-                );
+                });
     }
 
     // ================= TASK LIST =================
@@ -178,54 +174,49 @@ public class HomeFragment extends Fragment
 
                     if (querySnapshot == null) return;
 
-                            taskList.clear();
+                    taskList.clear();
 
-                            int pending = 0;
-                            int completed = 0;
-                            int missed = 0;
+                    int pending = 0;
+                    int completed = 0;
 
-                            Date today = new Date();
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
 
-                            for (QueryDocumentSnapshot doc : querySnapshot) {
+                        TaskModel task = doc.toObject(TaskModel.class);
+                        task.setId(doc.getId());
 
-                                TaskModel task = doc.toObject(TaskModel.class);
-                                task.setId(doc.getId());
+                        String status = task.getStatus();
+                        boolean isDone = "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
 
-                                // 🔥 AUTO-MISS LOGIC
-                                if (task.isMissed() && !"Missed".equalsIgnoreCase(task.getStatus())) {
-                                    task.setStatus("Missed");
+                        // 🔥 AUTO-MISS LOGIC
+                        if (task.isMissed() && !"Missed".equalsIgnoreCase(status)) {
+                            status = "Missed";
+                            task.setStatus(status);
 
-                                    db.collection("users")
-                                            .document(uid)
-                                            .collection("tasks")
-                                            .document(task.getId())
-                                            .update("status", "Missed");
-                                }
+                            db.collection("users")
+                                    .document(uid)
+                                    .collection("tasks")
+                                    .document(task.getId())
+                                    .update("status", "Missed");
+                        }
 
-                                // 🔥 HIDE COMPLETED TASKS FROM PREVIOUS DAYS
-                                if ("Completed".equalsIgnoreCase(task.getStatus())
-                                        || "Completed Late".equalsIgnoreCase(task.getStatus())) {
+                        // 🔹 COUNT STATS (From all tasks)
+                        if (isDone) {
+                            completed++;
+                        } else {
+                            pending++;
+                        }
 
-                                    if (task.getDueDate() != null && task.getDueDate().before(today)) {
-                                        continue; // ❌ DO NOT ADD TO LIST
-                                    }
-                                }
+                        // 🔹 ADD TO LIST ONLY IF NOT COMPLETED
+                        // This keeps the Home screen focused on what's left to do
+                        if (!isDone) {
+                            taskList.add(task);
+                        }
+                    }
 
-                                // 🔹 ADD TO LIST
-                                taskList.add(task);
+                    // Total reflects the current tasks shown on screen
+                    int totalOnScreen = taskList.size();
 
-                                // 🔹 COUNT STATS
-                                if ("Completed".equalsIgnoreCase(task.getStatus())
-                                        || "Completed Late".equalsIgnoreCase(task.getStatus())) {
-                                    completed++;
-                                } else if ("Missed".equalsIgnoreCase(task.getStatus())) {
-                                    missed++;
-                                } else {
-                                    pending++;
-                                }
-                            }
-
-                    // Empty state
+                    // Empty state (only shows if NO pending/missed tasks)
                     if (taskList.isEmpty()) {
                         layoutEmpty.setVisibility(View.VISIBLE);
                         rvTasks.setVisibility(View.GONE);
@@ -237,33 +228,20 @@ public class HomeFragment extends Fragment
                     // Stats
                     tvPendingTasks.setText("Pending: " + pending);
                     tvCompletedTasks.setText("Completed: " + completed);
-                    tvTotalTasks.setText("Total: " + taskList.size());
-
+                    tvTotalTasks.setText("Total: " + totalOnScreen);
 
                     Collections.sort(taskList, (t1, t2) -> {
-
-                        // 1️⃣ Pending tasks first
+                        // Pending tasks first, then Missed
                         boolean t1Pending = "Pending".equalsIgnoreCase(t1.getStatus());
                         boolean t2Pending = "Pending".equalsIgnoreCase(t2.getStatus());
-
                         if (t1Pending && !t2Pending) return -1;
                         if (!t1Pending && t2Pending) return 1;
 
-                        // 2️⃣ Missed tasks next
-                        boolean t1Missed = "Missed".equalsIgnoreCase(t1.getStatus());
-                        boolean t2Missed = "Missed".equalsIgnoreCase(t2.getStatus());
-
-                        if (t1Missed && !t2Missed) return -1;
-                        if (!t1Missed && t2Missed) return 1;
-
-                        // 3️⃣ Sort by due date (earliest first)
                         Date d1 = t1.getDueDate();
                         Date d2 = t2.getDueDate();
-
                         if (d1 == null && d2 == null) return 0;
                         if (d1 == null) return 1;
                         if (d2 == null) return -1;
-
                         return d1.compareTo(d2);
                     });
 
@@ -285,6 +263,12 @@ public class HomeFragment extends Fragment
                 .collection("tasks")
                 .document(task.getId())
                 .update("status", isCompleted ? "Completed" : "Pending")
+                .addOnSuccessListener(unused -> {
+                    if (isCompleted) {
+                        // 🚀 Trigger streak update immediately after task completion
+                        StreakManager.updateStreak(requireContext(), uid);
+                    }
+                })
                 .addOnFailureListener(e ->
                         Toast.makeText(requireContext(),
                                 "Failed to update task",
@@ -296,6 +280,7 @@ public class HomeFragment extends Fragment
     @Override
     public void onStart() {
         super.onStart();
+        attachUserListener();
         attachTaskListener();
     }
 
@@ -305,6 +290,10 @@ public class HomeFragment extends Fragment
         if (taskListener != null) {
             taskListener.remove();
             taskListener = null;
+        }
+        if (userListener != null) {
+            userListener.remove();
+            userListener = null;
         }
     }
 }

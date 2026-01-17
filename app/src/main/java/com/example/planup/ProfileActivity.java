@@ -2,6 +2,7 @@ package com.example.planup;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -11,15 +12,19 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 
 public class ProfileActivity extends AppCompatActivity {
 
-    ImageView imgProfile;
+    private static final String TAG = "ProfileActivity";
+
+    ImageView imgProfile, btnBack;
     TextView tvNickname, tvFullName, tvEmail, tvGender;
     Button btnEditProfile, btnLogout;
 
     FirebaseAuth mAuth;
     FirebaseFirestore db;
+    ListenerRegistration profileListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,27 +50,33 @@ public class ProfileActivity extends AppCompatActivity {
         tvGender = findViewById(R.id.tvGender);
         btnEditProfile = findViewById(R.id.btnEditProfile);
         btnLogout = findViewById(R.id.btnLogout);
+        btnBack = findViewById(R.id.btnBack);
 
-        // 🔹 Load user data
-        loadUserProfile();
+        // 🔹 Attach Snapshot Listener for Real-time updates
+        attachProfileListener();
 
         btnEditProfile.setOnClickListener(v ->
                 startActivity(new Intent(this, EditProfileActivity.class)));
 
         btnLogout.setOnClickListener(v -> logoutUser());
+        btnBack.setOnClickListener(v -> finish());
     }
 
-    // 🔥 Fetch data from Firestore
-    private void loadUserProfile() {
+    // 🔥 Real-time Snapshot Listener
+    private void attachProfileListener() {
 
         String uid = mAuth.getCurrentUser().getUid();
 
-        db.collection("users")
+        profileListener = db.collection("users")
                 .document(uid)
-                .get()
-                .addOnSuccessListener(document -> {
+                .addSnapshotListener((document, e) -> {
 
-                    if (document.exists()) {
+                    if (e != null) {
+                        Log.e(TAG, "Profile listener error", e);
+                        return;
+                    }
+
+                    if (document != null && document.exists()) {
 
                         String fullName = document.getString("fullName");
                         String nickname = document.getString("nickname");
@@ -84,9 +95,7 @@ public class ProfileActivity extends AppCompatActivity {
                             imgProfile.setImageResource(R.drawable.ic_avatar_boy);
                         }
                     }
-                })
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Failed to load profile", Toast.LENGTH_SHORT).show());
+                });
     }
 
     // 🔴 Logout
@@ -97,5 +106,14 @@ public class ProfileActivity extends AppCompatActivity {
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Remove listener to prevent memory leaks
+        if (profileListener != null) {
+            profileListener.remove();
+        }
     }
 }

@@ -14,13 +14,18 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.example.planup.model.TaskModel;
 import com.google.android.material.button.MaterialButton;
@@ -40,6 +45,7 @@ public class AddTaskActivity extends AppCompatActivity {
     MaterialButtonToggleGroup togglePriority;
     MaterialSwitch switchAlarm;
     MaterialButton btnSaveTask, btnDate, btnTime;
+    ImageView btnBack;
 
     FirebaseAuth mAuth;
     FirebaseFirestore db;
@@ -62,6 +68,7 @@ public class AddTaskActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_add_task);
 
         etTaskTitle = findViewById(R.id.etTaskTitle);
@@ -71,6 +78,13 @@ public class AddTaskActivity extends AppCompatActivity {
         btnSaveTask = findViewById(R.id.btnSaveTask);
         btnDate = findViewById(R.id.btnDate);
         btnTime = findViewById(R.id.btnTime);
+        btnBack = findViewById(R.id.btnBack);
+
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(0, 0, 0, systemBars.bottom);
+            return insets;
+        });
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -78,6 +92,7 @@ public class AddTaskActivity extends AppCompatActivity {
         btnDate.setOnClickListener(v -> openDatePicker());
         btnTime.setOnClickListener(v -> openTimePicker());
         btnSaveTask.setOnClickListener(v -> saveTask());
+        btnBack.setOnClickListener(v -> finish());
     }
 
     private void openDatePicker() {
@@ -115,10 +130,7 @@ public class AddTaskActivity extends AppCompatActivity {
             return;
         }
 
-        if (desc.isEmpty()) {
-            etTaskDesc.setError("Task description required");
-            return;
-        }
+        // 🔹 Note is optional, so we removed the desc.isEmpty() check
 
         if (date.equals("Date")) {
             Toast.makeText(this, "Please select a date", Toast.LENGTH_SHORT).show();
@@ -212,6 +224,14 @@ public class AddTaskActivity extends AppCompatActivity {
         intent.putExtra("taskId", taskId);
 
         PendingIntent pendingIntent = PendingIntent.getBroadcast(this, taskId.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        alarmManager.setExact(AlarmManager.RTC_WAKEUP, alarmCalendar.getTimeInMillis(), pendingIntent);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(alarmCalendar.getTimeInMillis(), pendingIntent);
+            alarmManager.setAlarmClock(clockInfo, pendingIntent);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, alarmCalendar.getTimeInMillis(), pendingIntent);
+        } else {
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, alarmCalendar.getTimeInMillis(), pendingIntent);
+        }
     }
 }

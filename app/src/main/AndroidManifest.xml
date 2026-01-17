@@ -15,6 +15,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PlanUp">
         <activity
+            android:name=".TaskListActivity"
+            android:exported="false" />
+        <activity
             android:name=".EditTaskActivity"
             android:exported="false" />
         <activity
@@ -60,6 +63,14 @@
         <receiver
             android:name=".PendingTaskReminderReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".utils.TaskActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="ACTION_DONE" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

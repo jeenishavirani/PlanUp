@@ -12,8 +12,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 
-import java.util.Date;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -123,16 +121,18 @@ public class TasksFragment extends Fragment
 
                     taskList.clear();
 
-                    Date today = new Date();
-
                     for (QueryDocumentSnapshot doc : querySnapshot) {
 
                         TaskModel task = doc.toObject(TaskModel.class);
                         task.setId(doc.getId());
 
+                        String status = task.getStatus();
+                        boolean isDone = "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
+
                         // 🔥 AUTO-MISS LOGIC
-                        if (task.isMissed() && !"Missed".equalsIgnoreCase(task.getStatus())) {
-                            task.setStatus("Missed");
+                        if (task.isMissed() && !"Missed".equalsIgnoreCase(status)) {
+                            status = "Missed";
+                            task.setStatus(status);
 
                             db.collection("users")
                                     .document(uid)
@@ -141,18 +141,11 @@ public class TasksFragment extends Fragment
                                     .update("status", "Missed");
                         }
 
-                        // 🔥 HIDE COMPLETED TASKS FROM PREVIOUS DAYS
-                        if ("Completed".equalsIgnoreCase(task.getStatus())
-                                || "Completed Late".equalsIgnoreCase(task.getStatus())) {
-
-                            if (task.getDueDate() != null
-                                    && task.getDueDate().before(today)) {
-                                continue; // ❌ skip old completed tasks
-                            }
+                        // ✅ HIDE COMPLETED TASKS
+                        // This fragment is for managing active tasks
+                        if (!isDone) {
+                            taskList.add(task);
                         }
-
-                        // ✅ SHOW TASK
-                        taskList.add(task);
                     }
 
                     // Empty state
@@ -165,29 +158,17 @@ public class TasksFragment extends Fragment
                     }
 
                     Collections.sort(taskList, (t1, t2) -> {
-
-                        // 1️⃣ Pending tasks first
+                        // Pending tasks first
                         boolean t1Pending = "Pending".equalsIgnoreCase(t1.getStatus());
                         boolean t2Pending = "Pending".equalsIgnoreCase(t2.getStatus());
-
                         if (t1Pending && !t2Pending) return -1;
                         if (!t1Pending && t2Pending) return 1;
 
-                        // 2️⃣ Missed tasks next
-                        boolean t1Missed = "Missed".equalsIgnoreCase(t1.getStatus());
-                        boolean t2Missed = "Missed".equalsIgnoreCase(t2.getStatus());
-
-                        if (t1Missed && !t2Missed) return -1;
-                        if (!t1Missed && t2Missed) return 1;
-
-                        // 3️⃣ Sort by due date (earliest first)
                         Date d1 = t1.getDueDate();
                         Date d2 = t2.getDueDate();
-
                         if (d1 == null && d2 == null) return 0;
                         if (d1 == null) return 1;
                         if (d2 == null) return -1;
-
                         return d1.compareTo(d2);
                     });
 

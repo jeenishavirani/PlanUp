@@ -19,6 +19,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     Context context;
     List<TaskModel> taskList;
+    private boolean isViewOnly = false;
 
     // 🔹 Click task → open TaskDetail
     public interface OnTaskClickListener {
@@ -42,6 +43,17 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         this.taskList = taskList;
         this.clickListener = clickListener;
         this.statusChangeListener = statusChangeListener;
+    }
+
+    // Constructor for view-only mode
+    public TaskAdapter(Context context,
+                       List<TaskModel> taskList,
+                       OnTaskClickListener clickListener,
+                       boolean isViewOnly) {
+        this.context = context;
+        this.taskList = taskList;
+        this.clickListener = clickListener;
+        this.isViewOnly = isViewOnly;
     }
 
     @NonNull
@@ -83,15 +95,24 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         // 🔹 Reset checkbox listener
         holder.cbTaskCompleted.setOnCheckedChangeListener(null);
         holder.cbTaskCompleted.setChecked(
-                "Completed".equalsIgnoreCase(task.getStatus())
+                "Completed".equalsIgnoreCase(task.getStatus()) || 
+                "Completed Late".equalsIgnoreCase(task.getStatus())
         );
 
-        // 🔹 Checkbox → update status
-        holder.cbTaskCompleted.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (statusChangeListener != null) {
-                statusChangeListener.onTaskStatusChanged(task, isChecked);
-            }
-        });
+        if (isViewOnly) {
+            holder.cbTaskCompleted.setEnabled(false);
+            holder.cbTaskCompleted.setAlpha(0.7f);
+        } else {
+            holder.cbTaskCompleted.setEnabled(true);
+            holder.cbTaskCompleted.setAlpha(1.0f);
+            
+            // 🔹 Checkbox → update status
+            holder.cbTaskCompleted.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (statusChangeListener != null) {
+                    statusChangeListener.onTaskStatusChanged(task, isChecked);
+                }
+            });
+        }
 
         // 🔹 Click → details
         holder.itemView.setOnClickListener(v -> {
@@ -109,18 +130,21 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                     context.getResources().getColor(R.color.task_missed)
             );
 
-            // 🔥 IMPORTANT CHANGE
-            holder.cbTaskCompleted.setEnabled(true);   // ALLOW RECOVERY
+            if (!isViewOnly) {
+                holder.cbTaskCompleted.setEnabled(true);   // ALLOW RECOVERY
+            }
             holder.itemView.setAlpha(0.6f);
 
-        } else if ("Completed".equalsIgnoreCase(task.getStatus())) {
+        } else if ("Completed".equalsIgnoreCase(task.getStatus()) || "Completed Late".equalsIgnoreCase(task.getStatus())) {
 
             holder.tvStatus.setText("Completed");
             holder.tvStatus.setTextColor(
                     context.getResources().getColor(R.color.task_completed)
             );
 
-            holder.cbTaskCompleted.setEnabled(true);
+            if (!isViewOnly) {
+                holder.cbTaskCompleted.setEnabled(true);
+            }
             holder.itemView.setAlpha(1f);
 
         } else {
@@ -130,7 +154,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                     context.getResources().getColor(R.color.task_pending)
             );
 
-            holder.cbTaskCompleted.setEnabled(true);
+            if (!isViewOnly) {
+                holder.cbTaskCompleted.setEnabled(true);
+            }
             holder.itemView.setAlpha(1f);
         }
     }

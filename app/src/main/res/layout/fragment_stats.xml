@@ -13,7 +13,7 @@
         android:orientation="vertical"
         android:paddingBottom="32dp">
 
-        <!-- HEADER (Standardized to 180dp) -->
+        <!-- HEADER -->
         <LinearLayout
             android:id="@+id/layoutHeader"
             android:layout_width="match_parent"
@@ -49,10 +49,14 @@
             android:useDefaultMargins="true">
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTotal"
                 android:layout_width="0dp"
                 android:layout_columnWeight="1"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardElevation="2dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -65,45 +69,41 @@
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardCompleted"
                 android:layout_width="0dp"
                 android:layout_columnWeight="1"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardElevation="2dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="20dp">
-
-                    <TextView
-                        style="@style/AppText.Body"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stats_completed"
-                        android:textColor="@color/task_completed" />
+                    <TextView style="@style/AppText.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_completed" android:textColor="@color/task_completed" />
                     <TextView android:id="@+id/tvCompletedCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_default_count" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardMissed"
                 android:layout_width="0dp"
                 android:layout_columnWeight="1"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
+                app:cardElevation="2dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:padding="20dp">
-
-                    <TextView
-                        style="@style/AppText.Body"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stats_missed"
-                        android:textColor="@color/task_missed" />
+                    <TextView style="@style/AppText.Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_missed" android:textColor="@color/task_missed" />
                     <TextView android:id="@+id/tvMissedCount" style="@style/AppText.Header" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/stats_default_count" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -125,24 +125,72 @@
             </com.google.android.material.card.MaterialCardView>
         </GridLayout>
 
-        <!-- CHART -->
+        <!-- CHART SELECTOR -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggleChartType"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            app:singleSelection="true"
+            app:checkedButton="@+id/btnPie">
+
+            <Button
+                android:id="@+id/btnPie"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Distribution"
+                android:textSize="12sp"/>
+
+            <Button
+                android:id="@+id/btnBar"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Weekly"
+                android:textSize="12sp"/>
+
+            <Button
+                android:id="@+id/btnRadar"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Focus"
+                android:textSize="12sp"/>
+
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- CHART CONTAINER -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="240dp"
+            android:layout_height="360dp"
             android:layout_marginHorizontal="20dp"
-            android:layout_marginVertical="8dp"
+            android:layout_marginVertical="16dp"
             app:cardCornerRadius="16dp"
             app:cardElevation="2dp">
             
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="match_parent"
+                android:padding="12dp">
                 
-                <com.github.mikephil.charting.charts.LineChart
-                    android:id="@+id/lineChart"
+                <com.github.mikephil.charting.charts.PieChart
+                    android:id="@+id/pieChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"/>
+
+                <com.github.mikephil.charting.charts.BarChart
+                    android:id="@+id/barChart"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_margin="12dp"/>
+                    android:visibility="gone"/>
+
+                <com.github.mikephil.charting.charts.BarChart
+                    android:id="@+id/priorityBarChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone"/>
                 
                 <TextView
                     android:id="@+id/tvNoData"
@@ -154,7 +202,42 @@
                     android:visibility="gone"
                     android:textColor="@color/textColorSecondary"/>
             </FrameLayout>
-            
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- CHART ANALYSIS -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/tvAnalysisTitle"
+                    style="@style/AppText.Header"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Graph Analysis"
+                    android:textSize="18sp"
+                    android:textColor="@color/primaryColor"/>
+
+                <TextView
+                    android:id="@+id/tvAnalysisText"
+                    style="@style/AppText.Body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Select a graph to see detailed analysis."
+                    android:textColor="@color/textColorPrimary"/>
+
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <!-- MOTIVATION -->

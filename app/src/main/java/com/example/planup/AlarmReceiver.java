@@ -10,6 +10,8 @@ import android.os.Build;
 
 import androidx.core.app.NotificationCompat;
 
+import com.example.planup.utils.TaskActionReceiver;
+
 public class AlarmReceiver extends BroadcastReceiver {
 
     @Override
@@ -19,11 +21,20 @@ public class AlarmReceiver extends BroadcastReceiver {
 
         NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
+        // Main intent to open the app
         Intent notificationIntent = new Intent(context, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+
+        // Intent for "Mark as Done" action
+        Intent doneIntent = new Intent(context, TaskActionReceiver.class);
+        doneIntent.setAction("ACTION_DONE");
+        doneIntent.putExtra("taskId", taskId);
+        PendingIntent donePendingIntent = PendingIntent.getBroadcast(
+                context, taskId.hashCode(), doneIntent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel("task_alarms", "Task Alarms", NotificationManager.IMPORTANCE_HIGH);
+            channel.enableVibration(true);
             notificationManager.createNotificationChannel(channel);
         }
 
@@ -31,9 +42,13 @@ public class AlarmReceiver extends BroadcastReceiver {
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle("Task Reminder")
                 .setContentText(taskTitle)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setFullScreenIntent(pendingIntent, true)
                 .setContentIntent(pendingIntent)
-                .setAutoCancel(true);
+                .setAutoCancel(true)
+                // 🔹 Add "Mark as Done" button
+                .addAction(android.R.drawable.ic_menu_save, "Mark as Done", donePendingIntent);
 
         notificationManager.notify(taskId.hashCode(), builder.build());
     }

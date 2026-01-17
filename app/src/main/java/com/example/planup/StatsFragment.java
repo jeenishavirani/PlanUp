@@ -1,7 +1,10 @@
 package com.example.planup;
 
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,196 +14,333 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.github.mikephil.charting.charts.LineChart;
+import com.example.planup.model.TaskModel;
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.XAxis;
-import com.github.mikephil.charting.data.Entry;
-import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.data.PieData;
+import com.github.mikephil.charting.data.PieDataSet;
+import com.github.mikephil.charting.data.PieEntry;
+import com.github.mikephil.charting.formatter.ValueFormatter;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
 
 public class StatsFragment extends Fragment {
 
-    private LineChart lineChart;
-    private TextView tvTotalCount, tvCompletedCount, tvMissedCount, tvStreakCount;
+    private static final String TAG = "StatsFragment";
+
+    private PieChart pieChart;
+    private BarChart barChart, priorityBarChart;
+    private MaterialButtonToggleGroup toggleChartType;
+    
+    private TextView tvTotalCount, tvCompletedCount, tvMissedCount, tvStreakCount, tvNoData;
+    private TextView tvAnalysisTitle, tvAnalysisText;
+    private View cardTotal, cardCompleted, cardMissed;
+    
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
+    private ListenerRegistration statsListener;
+
+    private int lastTotal, lastCompleted, lastMissed;
+    private int[] weeklyCompleted = new int[7];
+    private Map<String, Integer> priorityCompleted = new HashMap<>();
 
     @Nullable
     @Override
-    public View onCreateView(
-            @NonNull LayoutInflater inflater,
-            @Nullable ViewGroup container,
-            @Nullable Bundle savedInstanceState) {
-
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_stats, container, false);
 
-        lineChart = view.findViewById(R.id.lineChart);
+        pieChart = view.findViewById(R.id.pieChart);
+        barChart = view.findViewById(R.id.barChart);
+        priorityBarChart = view.findViewById(R.id.priorityBarChart);
+        
+        toggleChartType = view.findViewById(R.id.toggleChartType);
+
         tvTotalCount = view.findViewById(R.id.tvTotalCount);
         tvCompletedCount = view.findViewById(R.id.tvCompletedCount);
         tvMissedCount = view.findViewById(R.id.tvMissedCount);
         tvStreakCount = view.findViewById(R.id.tvStreakCount);
+        tvNoData = view.findViewById(R.id.tvNoData);
+        
+        tvAnalysisTitle = view.findViewById(R.id.tvAnalysisTitle);
+        tvAnalysisText = view.findViewById(R.id.tvAnalysisText);
+        
+        cardTotal = view.findViewById(R.id.cardTotal);
+        cardCompleted = view.findViewById(R.id.cardCompleted);
+        cardMissed = view.findViewById(R.id.cardMissed);
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        loadStats();
-
+        setupClickListeners();
         return view;
     }
 
-    private void loadStats() {
-        if (mAuth.getCurrentUser() == null) return;
+    private void setupClickListeners() {
+        cardTotal.setOnClickListener(v -> openTaskList("all"));
+        cardCompleted.setOnClickListener(v -> openTaskList("completed"));
+        cardMissed.setOnClickListener(v -> openTaskList("missed"));
 
+        toggleChartType.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (isChecked) {
+                showChart(checkedId);
+            }
+        });
+    }
+
+    private void showChart(int checkedId) {
+        pieChart.setVisibility(View.GONE);
+        barChart.setVisibility(View.GONE);
+        priorityBarChart.setVisibility(View.GONE);
+
+        if (checkedId == R.id.btnPie) {
+            pieChart.setVisibility(View.VISIBLE);
+            drawPieChart(lastTotal, lastCompleted, lastMissed);
+            updateAnalysis("Overall Summary", "This circle shows how you are doing. Green is what you finished, Red is what you missed, and Purple is what's left.");
+        } else if (checkedId == R.id.btnBar) {
+            barChart.setVisibility(View.VISIBLE);
+            drawWeeklyChart();
+            updateAnalysis("Weekly Progress", "This shows how many tasks you finished each day for the last week. Taller bars mean you were very busy!");
+        } else if (checkedId == R.id.btnRadar) {
+            priorityBarChart.setVisibility(View.VISIBLE);
+            drawPriorityChart();
+            updateAnalysis("Important Tasks", "This shows which types of tasks you finish most. It helps you see if you are focusing on High, Medium, or Low priority work.");
+        }
+    }
+
+    private void updateAnalysis(String title, String analysis) {
+        if (tvAnalysisTitle != null) tvAnalysisTitle.setText(title);
+        if (tvAnalysisText != null) tvAnalysisText.setText(analysis);
+    }
+
+    private void openTaskList(String filter) {
+        Intent intent = new Intent(requireContext(), TaskListActivity.class);
+        intent.putExtra("filterType", filter);
+        startActivity(intent);
+    }
+
+    private void attachStatsListener() {
+        if (mAuth.getCurrentUser() == null) return;
         String uid = mAuth.getCurrentUser().getUid();
 
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        Date today = cal.getTime();
+        if (statsListener != null) statsListener.remove();
 
-        cal.add(Calendar.DAY_OF_YEAR, -6);
-        Date chartStartDate = cal.getTime();
+        statsListener = db.collection("users").document(uid).collection("tasks")
+                .addSnapshotListener((querySnapshot, e) -> {
+                    if (e != null || querySnapshot == null) return;
 
-        db.collection("users")
-                .document(uid)
-                .collection("tasks")
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
+                    lastTotal = querySnapshot.size();
+                    lastCompleted = 0;
+                    lastMissed = 0;
+                    weeklyCompleted = new int[7];
+                    priorityCompleted.clear();
+                    priorityCompleted.put("High", 0);
+                    priorityCompleted.put("Medium", 0);
+                    priorityCompleted.put("Low", 0);
 
-                    int totalTasks = querySnapshot.size();
-                    int totalCompleted = 0;
-                    int totalMissed = 0;
+                    Calendar cal = Calendar.getInstance();
+                    cal.set(Calendar.HOUR_OF_DAY, 0); 
+                    cal.set(Calendar.MINUTE, 0); 
+                    cal.set(Calendar.SECOND, 0); 
+                    cal.set(Calendar.MILLISECOND, 0);
+                    long todayStart = cal.getTimeInMillis();
 
-                    int[] completedByDay = new int[7];
-                    int[] missedByDay = new int[7];
+                    Calendar taskCal = Calendar.getInstance();
+                    Date now = new Date();
                     
-                    Set<String> completedDates = new HashSet<>();
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
-
                     for (QueryDocumentSnapshot doc : querySnapshot) {
-                        Date dueDate = doc.getDate("dueDate");
-                        String status = doc.getString("status");
+                        TaskModel task = doc.toObject(TaskModel.class);
+                        task.setId(doc.getId());
 
-                        if (status == null) continue;
-
+                        String status = task.getStatus();
+                        String priority = task.getPriority();
+                        Date dueDate = task.getDueDate();
+                        
                         boolean isDone = "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
+                        boolean isMissed = "Missed".equalsIgnoreCase(status) || 
+                                (!isDone && dueDate != null && now.after(dueDate));
                         
                         if (isDone) {
-                            totalCompleted++;
-                            if (dueDate != null) {
-                                completedDates.add(sdf.format(dueDate));
+                            lastCompleted++;
+                            if (priority != null && priorityCompleted.containsKey(priority)) {
+                                priorityCompleted.put(priority, priorityCompleted.get(priority) + 1);
                             }
-                        } else if ("Missed".equalsIgnoreCase(status)) {
-                            totalMissed++;
+                        } else if (isMissed) {
+                            lastMissed++;
                         }
 
-                        if (dueDate == null) continue;
+                        if (dueDate != null && isDone) {
+                            taskCal.setTime(dueDate);
+                            taskCal.set(Calendar.HOUR_OF_DAY, 0);
+                            taskCal.set(Calendar.MINUTE, 0);
+                            taskCal.set(Calendar.SECOND, 0);
+                            taskCal.set(Calendar.MILLISECOND, 0);
+                            long taskStart = taskCal.getTimeInMillis();
 
-                        // Chart logic (last 7 days)
-                        if (!dueDate.before(chartStartDate) && !dueDate.after(new Date())) {
-                            long diff = dueDate.getTime() - chartStartDate.getTime();
-                            int dayIndex = (int) (diff / (1000 * 60 * 60 * 24));
-                            
-                            if (dayIndex >= 0 && dayIndex < 7) {
-                                if (isDone) {
-                                    completedByDay[dayIndex]++;
-                                } else if ("Missed".equalsIgnoreCase(status)) {
-                                    missedByDay[dayIndex]++;
-                                }
+                            long diff = todayStart - taskStart;
+                            int daysAgo = (int) Math.round((double) diff / (1000 * 60 * 60 * 24));
+
+                            if (daysAgo >= 0 && daysAgo < 7) {
+                                int index = 6 - daysAgo;
+                                weeklyCompleted[index]++;
                             }
                         }
                     }
 
-                    // Calculate Streak
-                    int streak = calculateStreak(completedDates);
-
-                    // Update UI
-                    tvTotalCount.setText(String.valueOf(totalTasks));
-                    tvCompletedCount.setText(String.valueOf(totalCompleted));
-                    tvMissedCount.setText(String.valueOf(totalMissed));
-                    tvStreakCount.setText(String.valueOf(streak));
-
-                    drawChart(completedByDay, missedByDay);
+                    tvTotalCount.setText(String.valueOf(lastTotal));
+                    tvCompletedCount.setText(String.valueOf(lastCompleted));
+                    tvMissedCount.setText(String.valueOf(lastMissed));
+                    
+                    if (lastTotal > 0) {
+                        tvNoData.setVisibility(View.GONE);
+                        showChart(toggleChartType.getCheckedButtonId());
+                    } else {
+                        tvNoData.setVisibility(View.VISIBLE);
+                        pieChart.setVisibility(View.GONE);
+                        barChart.setVisibility(View.GONE);
+                        priorityBarChart.setVisibility(View.GONE);
+                    }
                 });
-    }
 
-    private int calculateStreak(Set<String> completedDates) {
-        int streak = 0;
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
-        Calendar cal = Calendar.getInstance();
-        
-        // Start checking from today
-        String todayStr = sdf.format(cal.getTime());
-        
-        // If nothing today, check if streak continued from yesterday
-        if (!completedDates.contains(todayStr)) {
-            cal.add(Calendar.DAY_OF_YEAR, -1);
-            String yesterdayStr = sdf.format(cal.getTime());
-            if (!completedDates.contains(yesterdayStr)) {
-                return 0; // Streak broken
+        db.collection("users").document(uid).get().addOnSuccessListener(doc -> {
+            if (doc.exists() && doc.contains("streak")) {
+                tvStreakCount.setText(String.valueOf(doc.getLong("streak")));
             }
-        } else {
-            // Today has completions, count it and then check previous days
-            streak++;
-            cal.add(Calendar.DAY_OF_YEAR, -1);
-        }
-
-        // Count backwards
-        while (completedDates.contains(sdf.format(cal.getTime()))) {
-            streak++;
-            cal.add(Calendar.DAY_OF_YEAR, -1);
-        }
-
-        return streak;
+        });
     }
 
-    private void drawChart(int[] completed, int[] missed) {
-        List<Entry> completedEntries = new ArrayList<>();
-        List<Entry> missedEntries = new ArrayList<>();
+    private void drawPieChart(int total, int completed, int missed) {
+        List<PieEntry> entries = new ArrayList<>();
+        int pending = total - (completed + missed);
+        if (pending < 0) pending = 0;
 
+        if (completed > 0) entries.add(new PieEntry(completed, "Done"));
+        if (missed > 0) entries.add(new PieEntry(missed, "Missed"));
+        if (pending > 0) entries.add(new PieEntry(pending, "Left"));
+
+        PieDataSet dataSet = new PieDataSet(entries, "");
+        dataSet.setColors(new int[]{Color.parseColor("#66BB6A"), Color.parseColor("#EF5350"), Color.parseColor("#9575CD")});
+        dataSet.setValueTextColor(Color.WHITE);
+        dataSet.setValueTextSize(14f);
+
+        pieChart.setData(new PieData(dataSet));
+        pieChart.setUsePercentValues(true);
+        pieChart.getDescription().setEnabled(false);
+        pieChart.setCenterText("Task Mix");
+        pieChart.setCenterTextSize(16f);
+        pieChart.getLegend().setEnabled(true);
+        pieChart.animateY(800);
+        pieChart.invalidate();
+    }
+
+    private void drawWeeklyChart() {
+        List<BarEntry> entries = new ArrayList<>();
         for (int i = 0; i < 7; i++) {
-            completedEntries.add(new Entry(i, completed[i]));
-            missedEntries.add(new Entry(i, missed[i]));
+            entries.add(new BarEntry(i, weeklyCompleted[i]));
         }
 
-        LineDataSet completedSet = new LineDataSet(completedEntries, "Completed");
-        completedSet.setColor(Color.parseColor("#4CAF50"));
-        completedSet.setCircleColor(Color.parseColor("#4CAF50"));
-        completedSet.setLineWidth(2f);
-        completedSet.setDrawFilled(true);
-        completedSet.setFillAlpha(60);
+        BarDataSet dataSet = new BarDataSet(entries, "Tasks Finished");
+        dataSet.setColor(Color.parseColor("#66BB6A"));
+        dataSet.setValueTextSize(10f);
+        dataSet.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return String.valueOf((int) value);
+            }
+        });
 
-        LineDataSet missedSet = new LineDataSet(missedEntries, "Missed");
-        missedSet.setColor(Color.parseColor("#F44336"));
-        missedSet.setCircleColor(Color.parseColor("#F44336"));
-        missedSet.setLineWidth(2f);
-        missedSet.setDrawFilled(true);
-        missedSet.setFillAlpha(60);
+        BarData data = new BarData(dataSet);
+        barChart.setData(data);
+        
+        final String[] days = new String[]{"6d ago", "5d ago", "4d ago", "3d ago", "2d ago", "Yesterday", "Today"};
+        XAxis xAxis = barChart.getXAxis();
+        xAxis.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                int index = (int) value;
+                if (index >= 0 && index < days.length) return days[index];
+                return "";
+            }
+        });
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setGranularity(1f);
+        xAxis.setDrawGridLines(false);
+        xAxis.setLabelRotationAngle(-30f);
+        xAxis.setTextSize(9f);
+        
+        barChart.getAxisRight().setEnabled(false);
+        barChart.getAxisLeft().setGranularity(1f);
+        barChart.getAxisLeft().setAxisMinimum(0f);
+        barChart.getDescription().setEnabled(false);
+        barChart.animateY(800);
+        barChart.invalidate();
+    }
 
-        LineData data = new LineData(completedSet, missedSet);
-        lineChart.setData(data);
+    private void drawPriorityChart() {
+        List<BarEntry> entries = new ArrayList<>();
+        entries.add(new BarEntry(0, priorityCompleted.get("High")));
+        entries.add(new BarEntry(1, priorityCompleted.get("Medium")));
+        entries.add(new BarEntry(2, priorityCompleted.get("Low")));
 
-        XAxis xAxis = lineChart.getXAxis();
+        BarDataSet dataSet = new BarDataSet(entries, "Done by Priority");
+        dataSet.setColors(new int[]{Color.parseColor("#EF5350"), Color.parseColor("#FFCA28"), Color.parseColor("#66BB6A")});
+        dataSet.setValueTextSize(12f);
+        dataSet.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return String.valueOf((int) value);
+            }
+        });
+
+        BarData data = new BarData(dataSet);
+        priorityBarChart.setData(data);
+        
+        final String[] labels = new String[]{"High", "Med", "Low"};
+        XAxis xAxis = priorityBarChart.getXAxis();
+        xAxis.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                int index = (int) value;
+                if (index >= 0 && index < labels.length) return labels[index];
+                return "";
+            }
+        });
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setGranularity(1f);
         xAxis.setDrawGridLines(false);
 
-        lineChart.getAxisRight().setEnabled(false);
-        lineChart.getDescription().setEnabled(false);
-        lineChart.animateX(800);
-        lineChart.invalidate();
+        priorityBarChart.getAxisRight().setEnabled(false);
+        priorityBarChart.getAxisLeft().setGranularity(1f);
+        priorityBarChart.getAxisLeft().setAxisMinimum(0f);
+        priorityBarChart.getDescription().setEnabled(false);
+        priorityBarChart.animateY(800);
+        priorityBarChart.invalidate();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        attachStatsListener();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (statsListener != null) statsListener.remove();
     }
 }

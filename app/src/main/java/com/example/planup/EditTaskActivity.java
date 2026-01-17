@@ -1,10 +1,16 @@
 package com.example.planup;
 
+import android.app.AlarmManager;
 import android.app.DatePickerDialog;
+import android.app.PendingIntent;
 import android.app.TimePickerDialog;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -28,6 +34,7 @@ public class EditTaskActivity extends AppCompatActivity {
     private Button btnDate, btnTime, btnSave;
     private MaterialButtonToggleGroup togglePriority;
     private MaterialSwitch switchAlarm;
+    private ImageView btnBack;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -58,12 +65,14 @@ public class EditTaskActivity extends AppCompatActivity {
         btnSave = findViewById(R.id.btnSave);
         togglePriority = findViewById(R.id.togglePriority);
         switchAlarm = findViewById(R.id.switchAlarm);
+        btnBack = findViewById(R.id.btnBack);
 
         loadTaskData();
 
         btnDate.setOnClickListener(v -> openDatePicker());
         btnTime.setOnClickListener(v -> openTimePicker());
         btnSave.setOnClickListener(v -> updateTask());
+        btnBack.setOnClickListener(v -> finish());
     }
 
     // ================= LOAD TASK =================
@@ -83,7 +92,7 @@ public class EditTaskActivity extends AppCompatActivity {
                     etTitle.setText(doc.getString("title"));
                     etDescription.setText(doc.getString("description"));
 
-                    // ✅ LOAD dueDate (IMPORTANT)
+                    // ✅ LOAD dueDate
                     Date dueDate = doc.getDate("dueDate");
                     if (dueDate != null) {
                         calendar.setTime(dueDate);
@@ -133,13 +142,13 @@ public class EditTaskActivity extends AppCompatActivity {
         MaterialButton rb = findViewById(checkedId);
         String priority = rb.getText().toString();
 
+        boolean hasAlarm = switchAlarm.isChecked();
+
         Map<String, Object> updates = new HashMap<>();
         updates.put("title", title);
         updates.put("description", desc);
         updates.put("priority", priority);
-        updates.put("alarm", switchAlarm.isChecked());
-
-        // 🔥 ONLY THIS FIELD MATTERS
+        updates.put("alarm", hasAlarm);
         updates.put("dueDate", calendar.getTime());
 
         String uid = mAuth.getCurrentUser().getUid();
@@ -150,6 +159,11 @@ public class EditTaskActivity extends AppCompatActivity {
                 .document(taskId)
                 .update(updates)
                 .addOnSuccessListener(unused -> {
+                    if (hasAlarm) {
+                        scheduleAlarm(taskId, title);
+                    } else {
+                        cancelAlarm(taskId);
+                    }
                     Toast.makeText(this, "Task updated", Toast.LENGTH_SHORT).show();
                     setResult(RESULT_OK);
                     finish();
@@ -157,6 +171,31 @@ public class EditTaskActivity extends AppCompatActivity {
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Update failed", Toast.LENGTH_SHORT).show()
                 );
+    }
+
+    private void scheduleAlarm(String taskId, String taskTitle) {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        intent.putExtra("taskTitle", taskTitle);
+        intent.putExtra("taskId", taskId);
+
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, taskId.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            AlarmManager.AlarmClockInfo clockInfo = new AlarmManager.AlarmClockInfo(calendar.getTimeInMillis(), pendingIntent);
+            alarmManager.setAlarmClock(clockInfo, pendingIntent);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+        } else {
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+        }
+    }
+
+    private void cancelAlarm(String taskId) {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, taskId.hashCode(), intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+        alarmManager.cancel(pendingIntent);
     }
 
     // ================= DATE PICKER =================
