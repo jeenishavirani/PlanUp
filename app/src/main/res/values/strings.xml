@@ -1,5 +1,12 @@
 <resources>
     <string name="app_name">PlanUp</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="stats_progress_title">Your Progress 📊</string>
+    <string name="stats_progress_subtitle">Track your productivity journey</string>
+    <string name="stats_total_tasks">Total Tasks</string>
+    <string name="stats_completed">Total Completed</string>
+    <string name="stats_missed">Totally Missed</string>
+    <string name="stats_streak">Streak 🔥</string>
+    <string name="stats_default_count">0</string>
+    <string name="stats_no_chart_data">No chart data available</string>
+    <string name="stats_motivation">Consistency beats intensity. Keep going 💪</string>
 </resources>

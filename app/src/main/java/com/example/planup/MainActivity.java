@@ -1,6 +1,8 @@
 package com.example.planup;
 
+import android.graphics.Rect;
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -14,11 +16,33 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
+
+        // 🔔 Notifications (unchanged)
+        ReminderScheduler.scheduleDailyMorningReminder(this);
 
         bottomNav = findViewById(R.id.bottomNavigation);
 
-        // Default fragment
+        // 🔥 KEYBOARD DETECTION (CORRECT APPROACH)
+//        View rootView = findViewById(android.R.id.content);
+//        rootView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+//
+//            Rect r = new Rect();
+//            rootView.getWindowVisibleDisplayFrame(r);
+//
+//            int screenHeight = rootView.getRootView().getHeight();
+//            int keypadHeight = screenHeight - r.bottom;
+//
+//            // Keyboard open → hide bottom nav
+//            if (keypadHeight > screenHeight * 0.15) {
+//                bottomNav.setVisibility(View.GONE);
+//            } else {
+//                bottomNav.setVisibility(View.VISIBLE);
+//            }
+//        });
+
+        // 🔹 Default fragment
         if (savedInstanceState == null) {
             loadFragment(new HomeFragment());
             bottomNav.setSelectedItemId(R.id.nav_home);
@@ -31,18 +55,17 @@ public class MainActivity extends AppCompatActivity {
             if (item.getItemId() == R.id.nav_home) {
                 fragment = new HomeFragment();
             } else if (item.getItemId() == R.id.nav_tasks) {
-                fragment = new TasksFragment(); // next step
+                fragment = new TasksFragment();
             } else if (item.getItemId() == R.id.nav_stats) {
-                fragment = new StatsFragment(); // next step
+                fragment = new StatsFragment();
             } else if (item.getItemId() == R.id.nav_ai) {
-                fragment = new AIAssistantFragment(); // existing
+                fragment = new AIAssistantFragment();
             }
 
             if (fragment != null) {
                 loadFragment(fragment);
                 return true;
             }
-
             return false;
         });
     }

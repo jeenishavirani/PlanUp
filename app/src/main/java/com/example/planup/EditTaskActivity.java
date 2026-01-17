@@ -5,13 +5,13 @@ import android.app.TimePickerDialog;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -26,8 +26,8 @@ public class EditTaskActivity extends AppCompatActivity {
 
     private EditText etTitle, etDescription;
     private Button btnDate, btnTime, btnSave;
-    private RadioGroup rgPriority;
-    private SwitchMaterial switchAlarm;
+    private MaterialButtonToggleGroup togglePriority;
+    private MaterialSwitch switchAlarm;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -56,7 +56,7 @@ public class EditTaskActivity extends AppCompatActivity {
         btnDate = findViewById(R.id.btnDate);
         btnTime = findViewById(R.id.btnTime);
         btnSave = findViewById(R.id.btnSave);
-        rgPriority = findViewById(R.id.rgPriority);
+        togglePriority = findViewById(R.id.togglePriority);
         switchAlarm = findViewById(R.id.switchAlarm);
 
         loadTaskData();
@@ -99,11 +99,11 @@ public class EditTaskActivity extends AppCompatActivity {
 
                     String priority = doc.getString("priority");
                     if ("High".equalsIgnoreCase(priority)) {
-                        ((RadioButton) findViewById(R.id.rbHigh)).setChecked(true);
+                        togglePriority.check(R.id.btnHigh);
                     } else if ("Medium".equalsIgnoreCase(priority)) {
-                        ((RadioButton) findViewById(R.id.rbMedium)).setChecked(true);
-                    } else {
-                        ((RadioButton) findViewById(R.id.rbLow)).setChecked(true);
+                        togglePriority.check(R.id.btnMedium);
+                    } else if ("Low".equalsIgnoreCase(priority)) {
+                        togglePriority.check(R.id.btnLow);
                     }
 
                     Boolean alarm = doc.getBoolean("alarm");
@@ -124,13 +124,13 @@ public class EditTaskActivity extends AppCompatActivity {
             return;
         }
 
-        int checkedId = rgPriority.getCheckedRadioButtonId();
+        int checkedId = togglePriority.getCheckedButtonId();
         if (checkedId == -1) {
             Toast.makeText(this, "Select priority", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        RadioButton rb = findViewById(checkedId);
+        MaterialButton rb = findViewById(checkedId);
         String priority = rb.getText().toString();
 
         Map<String, Object> updates = new HashMap<>();

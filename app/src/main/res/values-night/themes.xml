@@ -1,7 +1,37 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.PlanUp" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">@color/primaryLightColor</item>
+        <item name="colorOnPrimary">@color/primaryDarkColor</item>
+        <item name="colorPrimaryContainer">@color/primaryColor</item>
+        <item name="colorOnPrimaryContainer">@color/secondaryColor</item>
+
+        <item name="colorSecondary">@color/primaryLightColor</item>
+        <item name="colorOnSecondary">@color/primaryDarkColor</item>
+
+        <item name="android:windowBackground">@color/primaryDarkColor</item>
+        <item name="android:statusBarColor">@color/primaryDarkColor</item>
+
+        <item name="colorSurface">#2A1B4D</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="colorSurfaceVariant">@color/primaryColor</item>
+        <item name="colorOnSurfaceVariant">@color/primaryLightColor</item>
+
+        <item name="android:datePickerDialogTheme">@style/DatePickerTheme</item>
+        <item name="android:timePickerDialogTheme">@style/DatePickerTheme</item>
+    </style>
+
+    <style name="DatePickerTheme" parent="Theme.Material3.DayNight.Dialog">
+        <item name="colorPrimary">@color/primaryLightColor</item>
+        <item name="colorOnPrimary">@color/primaryDarkColor</item>
+        <item name="colorSurface">#2A1B4D</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="colorAccent">@color/primaryLightColor</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/DialogButtonStyle</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/DialogButtonStyle</item>
+    </style>
+
+    <style name="DialogButtonStyle" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">@color/primaryLightColor</item>
     </style>
 </resources>

@@ -1,173 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
+<androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F6F1FF"
-    android:fillViewport="true">
+    android:background="#F6F1FF">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="32dp">
+    <!-- 🔹 CHAT HEADER -->
+    <LinearLayout
+        android:id="@+id/chatHeader"
+        android:layout_width="0dp"
+        android:layout_height="94dp"
+        android:background="@drawable/bg_header"
+        android:gravity="center"
+        android:paddingHorizontal="20dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- 🟣 HEADER -->
         <LinearLayout
-            android:id="@+id/layoutHeader"
-            android:layout_width="0dp"
-            android:layout_height="220dp"
-            android:background="@drawable/bg_header"
             android:orientation="vertical"
-            android:padding="20dp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center">
 
             <TextView
-                android:layout_height="wrap_content"
-                android:layout_width="wrap_content"
-                android:text="AI Planner"
-                android:textSize="35sp"
-                android:layout_marginTop="30dp"
+                android:text="AI Assistant 🤖"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="#050505"
-                android:layout_gravity="center"/>
+                android:textColor="@android:color/white"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
 
             <TextView
-                android:layout_height="wrap_content"
-                android:layout_width="wrap_content"
-                android:text="Get a smart schedule for \nyour goals"
-                android:textSize="16sp"
-                android:gravity="center"
-                android:textColor="#333333"
-                android:layout_marginTop="6dp"
-                android:layout_gravity="center"/>
-
-            <TextView
-                android:layout_height="wrap_content"
-                android:layout_width="wrap_content"
-                android:text="⚠️ General guidance only, not professional advice"
+                android:text="Your smart planning partner"
                 android:textSize="12sp"
-                android:textColor="#777777"
-                android:layout_marginTop="12dp"
-                android:layout_gravity="center"/>
+                android:textColor="#EDE7F6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
         </LinearLayout>
+    </LinearLayout>
 
-        <!-- 🟣 INPUT CARD -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardInput"
+    <!-- 🔹 EMPTY STATE -->
+    <LinearLayout
+        android:id="@+id/layoutEmptyChat"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintTop_toBottomOf="@id/chatHeader"
+        app:layout_constraintBottom_toTopOf="@id/chatInputLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:layout_width="190dp"
+            android:layout_height="190dp"
+            android:src="@drawable/ai_chat_illustration"
+            android:alpha="0.9"/>
+
+        <TextView
+            android:text="Ask me anything ✨"
+            android:textSize="14sp"
+            android:textColor="#888888"
+            android:layout_marginTop="12dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <!-- 🔹 CHAT LIST -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvChat"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="12dp"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toBottomOf="@id/chatHeader"
+        app:layout_constraintBottom_toTopOf="@id/chatInputLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- 🔹 INPUT BAR -->
+    <LinearLayout
+        android:id="@+id/chatInputLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <EditText
+            android:id="@+id/etMessage"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="6dp"
-            app:layout_constraintTop_toBottomOf="@id/layoutHeader"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_input_round"
+            android:hint="Ask me anything..."
+            android:inputType="textMultiLine"
+            android:maxLines="4"
+            android:paddingHorizontal="16dp"/>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
+        <ImageView
+            android:id="@+id/btnSend"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_send_button"
+            android:padding="12dp"
+            android:src="@android:drawable/ic_menu_send"
+            android:tint="@android:color/white"/>
+    </LinearLayout>
 
-                <TextView
-                    android:layout_height="wrap_content"
-                    android:layout_width="wrap_content"
-                    android:text="Describe your goal"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="#333333"/>
-
-                <EditText
-                    android:id="@+id/etPrompt"
-                    android:layout_width="match_parent"
-                    android:layout_height="120dp"
-                    android:layout_marginTop="8dp"
-                    android:gravity="top"
-                    android:hint="e.g. Plan my study schedule for exams in 30 days"
-                    android:background="@drawable/bg_white_card"
-                    android:padding="12dp"
-                    android:inputType="textMultiLine"/>
-
-                <!-- QUICK SUGGESTIONS -->
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chipGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    app:singleSelection="false">
-
-                    <com.google.android.material.chip.Chip
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        style="@style/Widget.Material3.Chip.Assist"
-                        android:text="📚 Exam Prep"/>
-
-                    <com.google.android.material.chip.Chip
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        style="@style/Widget.Material3.Chip.Assist"
-                        android:text="🥗 Diet Routine"/>
-
-                    <com.google.android.material.chip.Chip
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        style="@style/Widget.Material3.Chip.Assist"
-                        android:text="🧘 Daily Routine"/>
-
-                    <com.google.android.material.chip.Chip
-                        android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"
-                        style="@style/Widget.Material3.Chip.Assist"
-                        android:text="💼 Work Focus"/>
-                </com.google.android.material.chip.ChipGroup>
-
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- 🟣 GENERATE BUTTON -->
-        <Button
-            android:id="@+id/btnGenerate"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="Generate Smart Plan"
-            android:textAllCaps="false"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:backgroundTint="#9B6EF3"
-            android:textColor="@android:color/white"
-            android:padding="14dp"
-            android:layout_marginHorizontal="16dp"
-            app:layout_constraintTop_toBottomOf="@id/cardInput"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
-
-        <!-- 🟣 OUTPUT PLACEHOLDER -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cardOutput"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
-            android:visibility="gone"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="6dp"
-            app:layout_constraintTop_toBottomOf="@id/btnGenerate"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
-
-            <TextView
-                android:id="@+id/tvResult"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="20dp"
-                android:text="AI generated plan will appear here"
-                android:textSize="14sp"
-                android:textColor="#333333"/>
-        </androidx.cardview.widget.CardView>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
-
-</androidx.core.widget.NestedScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -15,6 +15,8 @@ import android.widget.Toast;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import com.example.planup.utils.NotificationHelper;
+
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -65,6 +67,13 @@ public class HomeFragment extends Fragment
             @Nullable Bundle savedInstanceState) {
 
         View view = inflater.inflate(R.layout.fragment_home, container, false);
+
+        NotificationHelper.show(
+                requireContext(),
+                "PlanUp 💜",
+                "You’re doing great. One task at a time."
+        );
+
 
         // 🔹 Views
         imgProfile = view.findViewById(R.id.imgProfile);
