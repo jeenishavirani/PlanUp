@@ -8,6 +8,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
@@ -22,7 +23,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Enable edge-to-edge
         EdgeToEdge.enable(this);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        
         setContentView(R.layout.activity_main);
 
         // 🧹 Cleanup old tasks (older than 1 week)
@@ -42,6 +47,12 @@ public class MainActivity extends AppCompatActivity {
 
         bottomNav = findViewById(R.id.bottomNavigation);
 
+        // Apply bottom insets to BottomNavigationView
+        ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(0, 0, 0, systemBars.bottom);
+            return insets;
+        });
 
         // 🔥 KEYBOARD DETECTION (THIS FIXES FLOATING ISSUE)
         View rootView = findViewById(android.R.id.content);

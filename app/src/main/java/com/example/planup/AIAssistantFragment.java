@@ -17,16 +17,11 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.planup.R;
 import com.example.planup.adapter.ChatAdapter;
 import com.example.planup.model.ChatMessage;
 import com.example.planup.ai.IntentDetector;
 import com.example.planup.ai.FollowUpQuestionGenerator;
 import com.example.planup.ai.PlannerEngine;
-
-import com.example.planup.adapter.ChatAdapter;
-import com.example.planup.model.ChatMessage;
-
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +31,7 @@ public class AIAssistantFragment extends Fragment {
     private RecyclerView rvChat;
     private EditText etMessage;
     private ImageView btnSend;
-    private LinearLayout chatInputLayout;
+    private LinearLayout chatInputLayout, chatHeader;
     private LinearLayout layoutEmptyChat;
 
     private ChatAdapter adapter;
@@ -61,12 +56,12 @@ public class AIAssistantFragment extends Fragment {
         btnSend = view.findViewById(R.id.btnSend);
         chatInputLayout = view.findViewById(R.id.chatInputLayout);
         layoutEmptyChat = view.findViewById(R.id.layoutEmptyChat);
+        chatHeader = view.findViewById(R.id.chatHeader);
 
         adapter = new ChatAdapter(messages);
 
         LinearLayoutManager lm = new LinearLayoutManager(requireContext());
         lm.setStackFromEnd(true);
-        lm.setStackFromEnd(true); // chat behavior
         rvChat.setLayoutManager(lm);
         rvChat.setAdapter(adapter);
 
@@ -85,16 +80,6 @@ public class AIAssistantFragment extends Fragment {
             if (currentIntent == null) {
 
                 currentIntent = IntentDetector.detect(text);
-
-                // Unknown intent handling
-                if (currentIntent == null || currentIntent.equals("UNKNOWN")) {
-                    addMessage(
-                            "I can help you plan things like exams, daily routines, focus, health, or personal goals 😊\nTell me what you want help with.",
-                            ChatMessage.AI
-                    );
-                    currentIntent = null;
-                    return;
-                }
 
                 addMessage("Got it 👍 Let me ask you a few things.", ChatMessage.AI);
 
@@ -140,52 +125,15 @@ public class AIAssistantFragment extends Fragment {
             }
         });
 
-        // ✅ Keyboard handling
+        // ✅ HANDLE SYSTEM UI INSETS
         ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
-            Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
-            v.setPadding(0, 0, 0, imeInsets.bottom);
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
 
-            // User message
-            messages.add(new ChatMessage(text, ChatMessage.USER));
-            adapter.notifyItemInserted(messages.size() - 1);
-            rvChat.scrollToPosition(messages.size() - 1);
-            etMessage.setText("");
+            // Top inset for header
+            chatHeader.setPadding(chatHeader.getPaddingLeft(), systemBars.top, chatHeader.getPaddingRight(), chatHeader.getPaddingBottom());
 
-            updateEmptyState();
-
-            // Fake AI reply (temporary)
-            rvChat.postDelayed(() -> {
-                messages.add(new ChatMessage(
-                        "Got it 👍 I’ll help you plan this.",
-                        ChatMessage.AI
-                ));
-                adapter.notifyItemInserted(messages.size() - 1);
-                rvChat.scrollToPosition(messages.size() - 1);
-            }, 600);
-        });
-
-        // ✅ CORRECT KEYBOARD + BOTTOM NAV HANDLING
-        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
-
-            Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
-            Insets navInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-
-            int bottomPadding = Math.max(imeInsets.bottom, navInsets.bottom);
-
-            chatInputLayout.setPadding(
-                    chatInputLayout.getPaddingLeft(),
-                    chatInputLayout.getPaddingTop(),
-                    chatInputLayout.getPaddingRight(),
-                    bottomPadding
-            );
-
-            rvChat.setPadding(
-                    rvChat.getPaddingLeft(),
-                    rvChat.getPaddingTop(),
-                    rvChat.getPaddingRight(),
-                    bottomPadding + 8
-            );
-
+            // Bottom inset for input bar (handle both nav bar and keyboard)
+            v.setPadding(0, 0, 0, systemBars.bottom);
 
             return insets;
         });
@@ -201,9 +149,6 @@ public class AIAssistantFragment extends Fragment {
         rvChat.scrollToPosition(messages.size() - 1);
         updateEmptyState();
     }
-
-    // 🔹 Empty state
-    // 🔹 EMPTY STATE HANDLING
 
     private void updateEmptyState() {
         if (messages.isEmpty()) {

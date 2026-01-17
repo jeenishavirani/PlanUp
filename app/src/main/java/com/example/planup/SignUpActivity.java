@@ -2,6 +2,7 @@ package com.example.planup;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -9,7 +10,12 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -30,6 +36,11 @@ public class SignUpActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Enable edge-to-edge
+        EdgeToEdge.enable(this);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        
         setContentView(R.layout.activity_sign_up);
 
         mAuth = FirebaseAuth.getInstance();
@@ -43,6 +54,13 @@ public class SignUpActivity extends AppCompatActivity {
         spinnerGender = findViewById(R.id.spinnerGender);
         btnSignup = findViewById(R.id.btnSignup);
         txtLogin = findViewById(R.id.txtLogin);
+
+        // Handle system UI insets
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return insets;
+        });
 
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
                 this,

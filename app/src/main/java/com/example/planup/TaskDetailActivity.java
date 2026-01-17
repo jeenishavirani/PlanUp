@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -15,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.planup.model.TaskModel;
@@ -29,6 +31,7 @@ public class TaskDetailActivity extends AppCompatActivity {
     private TextView tvTitle, tvTaskDesc, tvDate, tvTime, tvPriority, tvAlarm;
     private Button btnEditTask, btnDeleteTask;
     private ImageView btnBack;
+    private LinearLayout header;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -49,7 +52,11 @@ public class TaskDetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Enable edge-to-edge
         EdgeToEdge.enable(this);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        
         setContentView(R.layout.activity_task_detail);
 
         mAuth = FirebaseAuth.getInstance();
@@ -74,9 +81,19 @@ public class TaskDetailActivity extends AppCompatActivity {
         btnEditTask = findViewById(R.id.btnEditTask);
         btnDeleteTask = findViewById(R.id.btnDeleteTask);
         btnBack = findViewById(R.id.btnBack);
+        header = findViewById(R.id.header);
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+        // Handle system UI insets
+        View mainView = findViewById(R.id.main);
+        ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            
+            // Top padding for header
+            if (header != null) {
+                header.setPadding(header.getPaddingLeft(), systemBars.top, header.getPaddingRight(), header.getPaddingBottom());
+            }
+            
+            // Bottom padding for the main container
             v.setPadding(0, 0, 0, systemBars.bottom);
             return insets;
         });

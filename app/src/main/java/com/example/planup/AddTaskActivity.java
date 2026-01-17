@@ -12,10 +12,11 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.RadioButton;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -25,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.planup.model.TaskModel;
@@ -46,6 +48,7 @@ public class AddTaskActivity extends AppCompatActivity {
     MaterialSwitch switchAlarm;
     MaterialButton btnSaveTask, btnDate, btnTime;
     ImageView btnBack;
+    LinearLayout layoutHeader;
 
     FirebaseAuth mAuth;
     FirebaseFirestore db;
@@ -68,7 +71,11 @@ public class AddTaskActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Enable edge-to-edge
         EdgeToEdge.enable(this);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        
         setContentView(R.layout.activity_add_task);
 
         etTaskTitle = findViewById(R.id.etTaskTitle);
@@ -79,9 +86,19 @@ public class AddTaskActivity extends AppCompatActivity {
         btnDate = findViewById(R.id.btnDate);
         btnTime = findViewById(R.id.btnTime);
         btnBack = findViewById(R.id.btnBack);
+        layoutHeader = findViewById(R.id.layoutHeader);
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
+        // Handle system UI insets
+        View mainView = findViewById(R.id.main);
+        ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            
+            // Top padding for header
+            if (layoutHeader != null) {
+                layoutHeader.setPadding(layoutHeader.getPaddingLeft(), systemBars.top, layoutHeader.getPaddingRight(), layoutHeader.getPaddingBottom());
+            }
+            
+            // Bottom padding for the main container
             v.setPadding(0, 0, 0, systemBars.bottom);
             return insets;
         });
@@ -129,8 +146,6 @@ public class AddTaskActivity extends AppCompatActivity {
             etTaskTitle.setError("Task title required");
             return;
         }
-
-        // 🔹 Note is optional, so we removed the desc.isEmpty() check
 
         if (date.equals("Date")) {
             Toast.makeText(this, "Please select a date", Toast.LENGTH_SHORT).show();

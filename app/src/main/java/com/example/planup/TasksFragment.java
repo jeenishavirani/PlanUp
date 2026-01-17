@@ -11,9 +11,14 @@ import android.widget.Toast;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -37,7 +42,7 @@ public class TasksFragment extends Fragment
 
     // UI
     RecyclerView rvTasks;
-    LinearLayout layoutEmpty;
+    LinearLayout layoutEmpty, layoutHeader;
     FloatingActionButton fabAddTask;
 
     // Firebase
@@ -66,6 +71,14 @@ public class TasksFragment extends Fragment
         rvTasks = view.findViewById(R.id.rvTasks);
         layoutEmpty = view.findViewById(R.id.layoutEmpty);
         fabAddTask = view.findViewById(R.id.fabAddTask);
+        layoutHeader = view.findViewById(R.id.layoutHeader);
+
+        // Handle top insets for header
+        ViewCompat.setOnApplyWindowInsetsListener(layoutHeader, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
+            return insets;
+        });
 
         // 🔹 Firebase
         mAuth = FirebaseAuth.getInstance();
@@ -127,7 +140,7 @@ public class TasksFragment extends Fragment
                         task.setId(doc.getId());
 
                         String status = task.getStatus();
-                        boolean isDone = "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
+                        boolean isDone = task.isDone();
 
                         // 🔥 AUTO-MISS LOGIC
                         if (task.isMissed() && !"Missed".equalsIgnoreCase(status)) {
@@ -141,9 +154,9 @@ public class TasksFragment extends Fragment
                                     .update("status", "Missed");
                         }
 
-                        // ✅ HIDE COMPLETED TASKS
-                        // This fragment is for managing active tasks
-                        if (!isDone) {
+                        // ✅ HIDE COMPLETED AND MISSED TASKS
+                        // This fragment is for managing ACTIVE tasks only
+                        if (!isDone && !task.isMissed()) {
                             taskList.add(task);
                         }
                     }
@@ -158,12 +171,6 @@ public class TasksFragment extends Fragment
                     }
 
                     Collections.sort(taskList, (t1, t2) -> {
-                        // Pending tasks first
-                        boolean t1Pending = "Pending".equalsIgnoreCase(t1.getStatus());
-                        boolean t2Pending = "Pending".equalsIgnoreCase(t2.getStatus());
-                        if (t1Pending && !t2Pending) return -1;
-                        if (!t1Pending && t2Pending) return 1;
-
                         Date d1 = t1.getDueDate();
                         Date d2 = t2.getDueDate();
                         if (d1 == null && d2 == null) return 0;
@@ -185,11 +192,15 @@ public class TasksFragment extends Fragment
 
         String uid = mAuth.getCurrentUser().getUid();
 
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", isCompleted ? "Completed" : "Pending");
+        updates.put("completedAt", isCompleted ? System.currentTimeMillis() : null);
+
         db.collection("users")
                 .document(uid)
                 .collection("tasks")
                 .document(task.getId())
-                .update("status", isCompleted ? "Completed" : "Pending")
+                .update(updates)
                 .addOnFailureListener(e ->
                         Toast.makeText(requireContext(),
                                 "Failed to update task",

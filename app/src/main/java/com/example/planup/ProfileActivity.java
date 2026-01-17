@@ -3,12 +3,19 @@ package com.example.planup;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -21,6 +28,7 @@ public class ProfileActivity extends AppCompatActivity {
     ImageView imgProfile, btnBack;
     TextView tvNickname, tvFullName, tvEmail, tvGender;
     Button btnEditProfile, btnLogout;
+    LinearLayout profileHeader;
 
     FirebaseAuth mAuth;
     FirebaseFirestore db;
@@ -29,6 +37,10 @@ public class ProfileActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Enable edge-to-edge
+        EdgeToEdge.enable(this);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -51,6 +63,14 @@ public class ProfileActivity extends AppCompatActivity {
         btnEditProfile = findViewById(R.id.btnEditProfile);
         btnLogout = findViewById(R.id.btnLogout);
         btnBack = findViewById(R.id.btnBack);
+        profileHeader = findViewById(R.id.profileHeader);
+
+        // Apply top insets to header
+        ViewCompat.setOnApplyWindowInsetsListener(profileHeader, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
+            return insets;
+        });
 
         // 🔹 Attach Snapshot Listener for Real-time updates
         attachProfileListener();

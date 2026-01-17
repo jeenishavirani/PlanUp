@@ -15,9 +15,10 @@ public class TaskModel {
     private String description;
     private String priority;
     private boolean alarm;
-    private String status;     // Pending | Completed | Missed
+    private String status;     // Pending | Completed | Missed | Completed Late
     private Date dueDate;
     private long createdAt;
+    private Long completedAt;
 
     // 🔹 Required empty constructor
     public TaskModel() {}
@@ -57,6 +58,10 @@ public class TaskModel {
         return createdAt;
     }
 
+    public Long getCompletedAt() {
+        return completedAt;
+    }
+
     // ---------------- SETTERS ----------------
 
     public void setId(String id) {
@@ -91,6 +96,10 @@ public class TaskModel {
         this.createdAt = createdAt;
     }
 
+    public void setCompletedAt(Long completedAt) {
+        this.completedAt = completedAt;
+    }
+
     // ---------------- FORMATTED HELPERS ----------------
 
     @Exclude
@@ -107,24 +116,31 @@ public class TaskModel {
                 .format(dueDate);
     }
 
-    // ---------------- MISSED LOGIC (DERIVED) ----------------
+    // ---------------- STATUS HELPERS ----------------
+
+    @Exclude
+    public boolean isDone() {
+        return "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
+    }
 
     /**
      * A task is MISSED if:
      * - dueDate passed
-     * - AND status is NOT Completed
+     * - AND status is NOT Done (neither Completed nor Completed Late)
      */
     @Exclude
     public boolean isMissed() {
         if (dueDate == null) return false;
-        if ("Completed".equalsIgnoreCase(status)) return false;
+        if (isDone()) return false;
         return new Date().after(dueDate);
     }
 
     @Exclude
     public boolean isCompletedLate() {
         if (dueDate == null) return false;
-        if (!"Completed".equalsIgnoreCase(status)) return false;
+        if (!"Completed".equalsIgnoreCase(status) && !"Completed Late".equalsIgnoreCase(status)) return false;
+        // This is only true if it was marked as completed after the due date.
+        // Usually, the app logic should set "Completed Late" when the user checks it after the deadline.
         return new Date().after(dueDate);
     }
 

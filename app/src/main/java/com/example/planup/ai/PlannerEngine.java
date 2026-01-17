@@ -69,8 +69,6 @@ public class PlannerEngine {
                 break;
         }
 
-        plan.append("\n🌱 Remember: Consistency beats intensity.");
-
         return plan.toString();
     }
 }

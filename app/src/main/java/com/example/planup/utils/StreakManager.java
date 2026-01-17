@@ -8,12 +8,13 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,81 +26,92 @@ public class StreakManager {
 
     /**
      * Updates the user's streak in Firestore and notifies if a milestone is reached.
-     * Designed to persist streaks even when tasks older than 1 week are deleted.
+     * Uses java.time for local timezone correctness and avoids string comparisons.
      */
     public static void updateStreak(Context context, String uid) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         DocumentReference userRef = db.collection("users").document(uid);
 
         userRef.get().addOnSuccessListener(userDoc -> {
-            int streakValue = 0;
-            if (userDoc.contains("streak")) {
-                Object streakObj = userDoc.get("streak");
-                if (streakObj instanceof Long) streakValue = ((Long) streakObj).intValue();
-                else if (streakObj instanceof Integer) streakValue = (Integer) streakObj;
+            int currentLifetimeStreak = 0;
+            if (userDoc.exists() && userDoc.contains("streak")) {
+                Long streakLong = userDoc.getLong("streak");
+                if (streakLong != null) currentLifetimeStreak = streakLong.intValue();
             }
-            // 🔹 This must be final to be used in the nested lambda
-            final int currentLifetimeStreak = streakValue;
-            final String lastDate = userDoc.getString("lastStreakDate");
+            
+            final int finalLifetimeStreak = currentLifetimeStreak;
+            final String lastDateStr = userDoc.getString("lastStreakDate");
 
             db.collection("users")
                     .document(uid)
                     .collection("tasks")
                     .get()
-                    .addOnSuccessListener(queryDocumentSnapshots -> {
-                        Set<String> completedDates = new HashSet<>();
-                        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
-                        String todayStr = sdf.format(new Date());
+                    .addOnSuccessListener(querySnapshot -> {
+                        ZoneId zoneId = ZoneId.systemDefault();
+                        LocalDate today = LocalDate.now(zoneId);
+                        Set<LocalDate> completedDates = new HashSet<>();
 
-                        for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
                             String status = doc.getString("status");
                             if ("Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status)) {
-                                Date dueDate = doc.getDate("dueDate");
-                                if (dueDate != null) {
-                                    completedDates.add(sdf.format(dueDate));
+                                Long completedAt = doc.getLong("completedAt");
+                                if (completedAt != null) {
+                                    completedDates.add(Instant.ofEpochMilli(completedAt)
+                                            .atZone(zoneId)
+                                            .toLocalDate());
                                 }
                             }
                         }
 
-                        int localStreak = calculateLocalStreak(completedDates);
-                        int finalStreak = localStreak;
+                        int localStreak = calculateLocalStreak(completedDates, today);
+                        int streakToSave = localStreak;
 
-                        // 🔹 Lifetime Streak Persistence Logic
-                        if (localStreak >= 7) {
-                            if (todayStr.equals(lastDate)) {
-                                finalStreak = Math.max(localStreak, currentLifetimeStreak);
-                            } else if (isYesterday(lastDate)) {
-                                if (completedDates.contains(todayStr)) {
-                                    finalStreak = Math.max(localStreak, currentLifetimeStreak + 1);
-                                } else {
-                                    finalStreak = Math.max(localStreak, currentLifetimeStreak);
+                        // Lifetime Streak Persistence Logic
+                        if (lastDateStr != null) {
+                            try {
+                                LocalDate lastDate = LocalDate.parse(lastDateStr);
+                                if (today.isEqual(lastDate)) {
+                                    streakToSave = Math.max(localStreak, finalLifetimeStreak);
+                                } else if (today.minusDays(1).isEqual(lastDate)) {
+                                    if (completedDates.contains(today)) {
+                                        streakToSave = Math.max(localStreak, finalLifetimeStreak + 1);
+                                    } else {
+                                        streakToSave = Math.max(localStreak, finalLifetimeStreak);
+                                    }
                                 }
-                            } else {
-                                finalStreak = localStreak;
+                            } catch (Exception e) {
+                                Log.e(TAG, "Error parsing lastStreakDate", e);
                             }
-                        } else {
-                            finalStreak = localStreak;
                         }
 
                         // Update Firestore
                         Map<String, Object> updates = new HashMap<>();
-                        updates.put("streak", finalStreak);
-                        if (completedDates.contains(todayStr)) {
-                            updates.put("lastStreakDate", todayStr);
+                        updates.put("streak", streakToSave);
+                        if (completedDates.contains(today)) {
+                            updates.put("lastStreakDate", today.toString());
                         }
                         userRef.update(updates);
 
-                        checkAndNotifyMilestone(context, finalStreak);
+                        checkAndNotifyMilestone(context, streakToSave);
                     });
         }).addOnFailureListener(e -> Log.e(TAG, "Error fetching user for streak", e));
     }
 
-    private static boolean isYesterday(String dateStr) {
-        if (dateStr == null) return false;
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DAY_OF_YEAR, -1);
-        return dateStr.equals(sdf.format(cal.getTime()));
+    private static int calculateLocalStreak(Set<LocalDate> completedDates, LocalDate today) {
+        if (completedDates.isEmpty()) return 0;
+        
+        int streak = 0;
+        boolean completedToday = completedDates.contains(today);
+        boolean completedYesterday = completedDates.contains(today.minusDays(1));
+
+        if (!completedToday && !completedYesterday) return 0;
+
+        LocalDate checkDate = completedToday ? today : today.minusDays(1);
+        while (completedDates.contains(checkDate)) {
+            streak++;
+            checkDate = checkDate.minusDays(1);
+        }
+        return streak;
     }
 
     private static void checkAndNotifyMilestone(Context context, int streak) {
@@ -119,29 +131,5 @@ public class StreakManager {
                 prefs.edit().putInt(LAST_NOTIFIED_STREAK, streak).apply();
             }
         }
-    }
-
-    private static int calculateLocalStreak(Set<String> completedDates) {
-        if (completedDates.isEmpty()) return 0;
-        int streak = 0;
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
-        Calendar cal = Calendar.getInstance();
-        
-        String todayStr = sdf.format(cal.getTime());
-        boolean completedToday = completedDates.contains(todayStr);
-        
-        cal.add(Calendar.DAY_OF_YEAR, -1);
-        boolean completedYesterday = completedDates.contains(sdf.format(cal.getTime()));
-
-        if (!completedToday && !completedYesterday) return 0;
-
-        cal = Calendar.getInstance();
-        if (!completedToday) cal.add(Calendar.DAY_OF_YEAR, -1);
-
-        while (completedDates.contains(sdf.format(cal.getTime()))) {
-            streak++;
-            cal.add(Calendar.DAY_OF_YEAR, -1);
-        }
-        return streak;
     }
 }

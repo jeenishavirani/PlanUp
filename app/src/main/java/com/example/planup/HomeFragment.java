@@ -1,5 +1,8 @@
 package com.example.planup;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Date;
 
 import android.content.Intent;
@@ -21,6 +24,9 @@ import com.example.planup.utils.StreakManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -35,7 +41,9 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class HomeFragment extends Fragment
         implements TaskAdapter.OnTaskStatusChangeListener {
@@ -47,7 +55,7 @@ public class HomeFragment extends Fragment
     FloatingActionButton fabAddTask;
     TextView tvWelcome, tvPendingTasks, tvCompletedTasks, tvTotalTasks;
     RecyclerView rvTasks;
-    LinearLayout layoutEmpty;
+    LinearLayout layoutEmpty, layoutHeader;
 
     // Firebase
     FirebaseAuth mAuth;
@@ -78,10 +86,18 @@ public class HomeFragment extends Fragment
         tvWelcome = view.findViewById(R.id.tvWelcome);
         rvTasks = view.findViewById(R.id.rvTasks);
         layoutEmpty = view.findViewById(R.id.layoutEmpty);
+        layoutHeader = view.findViewById(R.id.layoutHeader);
 
         tvPendingTasks = view.findViewById(R.id.tvPendingTasks);
         tvCompletedTasks = view.findViewById(R.id.tvCompletedTasks);
         tvTotalTasks = view.findViewById(R.id.tvTotalTasks);
+
+        // Handle top insets for header
+        ViewCompat.setOnApplyWindowInsetsListener(layoutHeader, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
+            return insets;
+        });
 
         // 🔹 Firebase
         mAuth = FirebaseAuth.getInstance();
@@ -111,7 +127,18 @@ public class HomeFragment extends Fragment
         fabAddTask.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), AddTaskActivity.class)));
 
+        // Setup stats click listeners to open filtered lists
+        tvPendingTasks.setOnClickListener(v -> openTaskList("all")); // Shows active tasks
+        tvCompletedTasks.setOnClickListener(v -> openTaskList("completed"));
+        tvTotalTasks.setOnClickListener(v -> openTaskList("all")); // Show active tasks
+
         return view;
+    }
+
+    private void openTaskList(String filter) {
+        Intent intent = new Intent(requireContext(), TaskListActivity.class);
+        intent.putExtra("filterType", filter);
+        startActivity(intent);
     }
 
     // ================= USER DATA (REAL-TIME) =================
@@ -185,7 +212,7 @@ public class HomeFragment extends Fragment
                         task.setId(doc.getId());
 
                         String status = task.getStatus();
-                        boolean isDone = "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
+                        boolean isDone = task.isDone();
 
                         // 🔥 AUTO-MISS LOGIC
                         if (task.isMissed() && !"Missed".equalsIgnoreCase(status)) {
@@ -199,24 +226,28 @@ public class HomeFragment extends Fragment
                                     .update("status", "Missed");
                         }
 
-                        // 🔹 COUNT STATS (From all tasks)
+                        // 🔹 COUNT STATS
                         if (isDone) {
                             completed++;
-                        } else {
+                        } else if (!task.isMissed()) {
                             pending++;
                         }
 
-                        // 🔹 ADD TO LIST ONLY IF NOT COMPLETED
-                        // This keeps the Home screen focused on what's left to do
-                        if (!isDone) {
+                        // 🔹 ADD TO LIST ONLY IF PENDING (NOT DONE AND NOT MISSED)
+                        if ("Pending".equalsIgnoreCase(status) && !task.isMissed()) {
                             taskList.add(task);
                         }
                     }
 
-                    // Total reflects the current tasks shown on screen
-                    int totalOnScreen = taskList.size();
+                    // Total count for the screen reflects only what's currently in the list
+                    int screenTotal = taskList.size();
 
-                    // Empty state (only shows if NO pending/missed tasks)
+                    // Stats updates
+                    tvPendingTasks.setText("Pending: " + pending);
+                    tvCompletedTasks.setText("Completed: " + completed);
+                    tvTotalTasks.setText("Total: " + screenTotal);
+
+                    // Empty state (shows if NO pending tasks)
                     if (taskList.isEmpty()) {
                         layoutEmpty.setVisibility(View.VISIBLE);
                         rvTasks.setVisibility(View.GONE);
@@ -225,18 +256,7 @@ public class HomeFragment extends Fragment
                         rvTasks.setVisibility(View.VISIBLE);
                     }
 
-                    // Stats
-                    tvPendingTasks.setText("Pending: " + pending);
-                    tvCompletedTasks.setText("Completed: " + completed);
-                    tvTotalTasks.setText("Total: " + totalOnScreen);
-
                     Collections.sort(taskList, (t1, t2) -> {
-                        // Pending tasks first, then Missed
-                        boolean t1Pending = "Pending".equalsIgnoreCase(t1.getStatus());
-                        boolean t2Pending = "Pending".equalsIgnoreCase(t2.getStatus());
-                        if (t1Pending && !t2Pending) return -1;
-                        if (!t1Pending && t2Pending) return 1;
-
                         Date d1 = t1.getDueDate();
                         Date d2 = t2.getDueDate();
                         if (d1 == null && d2 == null) return 0;
@@ -258,11 +278,15 @@ public class HomeFragment extends Fragment
 
         String uid = mAuth.getCurrentUser().getUid();
 
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", isCompleted ? "Completed" : "Pending");
+        updates.put("completedAt", isCompleted ? System.currentTimeMillis() : null);
+
         db.collection("users")
                 .document(uid)
                 .collection("tasks")
                 .document(task.getId())
-                .update("status", isCompleted ? "Completed" : "Pending")
+                .update(updates)
                 .addOnSuccessListener(unused -> {
                     if (isCompleted) {
                         // 🚀 Trigger streak update immediately after task completion

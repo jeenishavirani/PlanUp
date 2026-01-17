@@ -1,10 +1,12 @@
 package com.example.planup;
 
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -12,6 +14,7 @@ import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -26,6 +29,7 @@ public class EditProfileActivity extends AppCompatActivity {
     Spinner spGender;
     Button btnSave;
     ImageView btnBack;
+    LinearLayout header;
 
     FirebaseAuth mAuth;
     FirebaseFirestore db;
@@ -33,18 +37,15 @@ public class EditProfileActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Enable edge-to-edge
         EdgeToEdge.enable(this);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        
         setContentView(R.layout.activity_edit_profile);
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
-
-        // Edge-to-edge padding
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
 
         // Initialize views
         etFullName = findViewById(R.id.etFullName);
@@ -53,6 +54,22 @@ public class EditProfileActivity extends AppCompatActivity {
         spGender = findViewById(R.id.spGender);
         btnSave = findViewById(R.id.btnSave);
         btnBack = findViewById(R.id.btnBack);
+        header = findViewById(R.id.header);
+
+        // Handle system UI insets
+        View mainView = findViewById(R.id.main);
+        ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            
+            // Top padding for header
+            if (header != null) {
+                header.setPadding(header.getPaddingLeft(), systemBars.top, header.getPaddingRight(), header.getPaddingBottom());
+            }
+            
+            // Bottom padding for the main container
+            v.setPadding(0, 0, 0, systemBars.bottom);
+            return insets;
+        });
 
         // Spinner adapter
         ArrayAdapter<CharSequence> adapter =

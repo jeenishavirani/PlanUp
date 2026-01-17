@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -27,7 +28,9 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TaskListActivity extends AppCompatActivity 
         implements TaskAdapter.OnTaskStatusChangeListener {
@@ -38,6 +41,7 @@ public class TaskListActivity extends AppCompatActivity
     LinearLayout layoutEmpty;
     ImageView btnBack;
     TextView tvTitle, tvSubtitle;
+    View headerBg;
     
     FirebaseAuth mAuth;
     FirebaseFirestore db;
@@ -53,6 +57,7 @@ public class TaskListActivity extends AppCompatActivity
         
         // 🔹 Enable Edge-to-Edge for immersive purple header
         EdgeToEdge.enable(this);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         
         setContentView(R.layout.activity_task_list);
 
@@ -68,10 +73,20 @@ public class TaskListActivity extends AppCompatActivity
         btnBack = findViewById(R.id.btnBack);
         tvTitle = findViewById(R.id.tvTitle);
         tvSubtitle = findViewById(R.id.tvSubtitle);
+        headerBg = findViewById(R.id.headerBg);
 
-        // Apply window insets for bottom padding only
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_layout), (v, insets) -> {
+        // Apply window insets
+        View mainLayout = findViewById(R.id.main_layout);
+        ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            
+            // Adjust back button margin for status bar
+            if (btnBack != null) {
+                ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) btnBack.getLayoutParams();
+                lp.topMargin = systemBars.top + 12; // Adjust base margin
+                btnBack.setLayoutParams(lp);
+            }
+
             v.setPadding(0, 0, 0, systemBars.bottom);
             return insets;
         });
@@ -134,13 +149,13 @@ public class TaskListActivity extends AppCompatActivity
                         TaskModel task = doc.toObject(TaskModel.class);
                         task.setId(doc.getId());
                         
-                        String status = task.getStatus();
-                        boolean isDone = "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
+                        boolean isDone = task.isDone();
+                        boolean isMissed = task.isMissed();
                         
                         if ("completed".equals(filterType)) {
                             if (isDone) taskList.add(task);
                         } else if ("missed".equals(filterType)) {
-                            if ("Missed".equalsIgnoreCase(status)) taskList.add(task);
+                            if (isMissed) taskList.add(task);
                         } else {
                             taskList.add(task);
                         }
@@ -164,5 +179,18 @@ public class TaskListActivity extends AppCompatActivity
 
     @Override
     public void onTaskStatusChanged(TaskModel task, boolean isCompleted) {
+        if (mAuth.getCurrentUser() == null) return;
+
+        String uid = mAuth.getCurrentUser().getUid();
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", isCompleted ? "Completed" : "Pending");
+        updates.put("completedAt", isCompleted ? System.currentTimeMillis() : null);
+
+        db.collection("users")
+                .document(uid)
+                .collection("tasks")
+                .document(task.getId())
+                .update(updates);
     }
 }

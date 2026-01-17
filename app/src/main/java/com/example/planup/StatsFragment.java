@@ -8,10 +8,14 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.planup.model.TaskModel;
@@ -31,13 +35,14 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 public class StatsFragment extends Fragment {
@@ -51,6 +56,7 @@ public class StatsFragment extends Fragment {
     private TextView tvTotalCount, tvCompletedCount, tvMissedCount, tvStreakCount, tvNoData;
     private TextView tvAnalysisTitle, tvAnalysisText;
     private View cardTotal, cardCompleted, cardMissed;
+    private LinearLayout layoutHeader;
     
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -83,6 +89,14 @@ public class StatsFragment extends Fragment {
         cardTotal = view.findViewById(R.id.cardTotal);
         cardCompleted = view.findViewById(R.id.cardCompleted);
         cardMissed = view.findViewById(R.id.cardMissed);
+        layoutHeader = view.findViewById(R.id.layoutHeader);
+
+        // Apply top insets to header
+        ViewCompat.setOnApplyWindowInsetsListener(layoutHeader, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
+            return insets;
+        });
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
@@ -111,7 +125,7 @@ public class StatsFragment extends Fragment {
         if (checkedId == R.id.btnPie) {
             pieChart.setVisibility(View.VISIBLE);
             drawPieChart(lastTotal, lastCompleted, lastMissed);
-            updateAnalysis("Overall Summary", "This circle shows how you are doing. Green is what you finished, Red is what you missed, and Purple is what's left.");
+            updateAnalysis("Overall Summary", "This circle shows how you are doing. Green is what you finished, Red is what you missed, and Purple is what's pending.");
         } else if (checkedId == R.id.btnBar) {
             barChart.setVisibility(View.VISIBLE);
             drawWeeklyChart();
@@ -153,52 +167,38 @@ public class StatsFragment extends Fragment {
                     priorityCompleted.put("Medium", 0);
                     priorityCompleted.put("Low", 0);
 
-                    Calendar cal = Calendar.getInstance();
-                    cal.set(Calendar.HOUR_OF_DAY, 0); 
-                    cal.set(Calendar.MINUTE, 0); 
-                    cal.set(Calendar.SECOND, 0); 
-                    cal.set(Calendar.MILLISECOND, 0);
-                    long todayStart = cal.getTimeInMillis();
-
-                    Calendar taskCal = Calendar.getInstance();
-                    Date now = new Date();
+                    ZoneId zoneId = ZoneId.systemDefault();
+                    LocalDate today = LocalDate.now(zoneId);
                     
                     for (QueryDocumentSnapshot doc : querySnapshot) {
                         TaskModel task = doc.toObject(TaskModel.class);
                         task.setId(doc.getId());
 
-                        String status = task.getStatus();
-                        String priority = task.getPriority();
-                        Date dueDate = task.getDueDate();
-                        
-                        boolean isDone = "Completed".equalsIgnoreCase(status) || "Completed Late".equalsIgnoreCase(status);
-                        boolean isMissed = "Missed".equalsIgnoreCase(status) || 
-                                (!isDone && dueDate != null && now.after(dueDate));
+                        boolean isDone = task.isDone();
+                        boolean isMissed = task.isMissed();
                         
                         if (isDone) {
                             lastCompleted++;
+                            String priority = task.getPriority();
                             if (priority != null && priorityCompleted.containsKey(priority)) {
                                 priorityCompleted.put(priority, priorityCompleted.get(priority) + 1);
                             }
+
+                            // Calculate daily completions for weekly bar chart
+                            Long completedAt = task.getCompletedAt();
+                            if (completedAt != null) {
+                                LocalDate completionDate = Instant.ofEpochMilli(completedAt)
+                                        .atZone(zoneId)
+                                        .toLocalDate();
+                                
+                                long daysAgo = ChronoUnit.DAYS.between(completionDate, today);
+                                if (daysAgo >= 0 && daysAgo < 7) {
+                                    int index = 6 - (int) daysAgo;
+                                    weeklyCompleted[index]++;
+                                }
+                            }
                         } else if (isMissed) {
                             lastMissed++;
-                        }
-
-                        if (dueDate != null && isDone) {
-                            taskCal.setTime(dueDate);
-                            taskCal.set(Calendar.HOUR_OF_DAY, 0);
-                            taskCal.set(Calendar.MINUTE, 0);
-                            taskCal.set(Calendar.SECOND, 0);
-                            taskCal.set(Calendar.MILLISECOND, 0);
-                            long taskStart = taskCal.getTimeInMillis();
-
-                            long diff = todayStart - taskStart;
-                            int daysAgo = (int) Math.round((double) diff / (1000 * 60 * 60 * 24));
-
-                            if (daysAgo >= 0 && daysAgo < 7) {
-                                int index = 6 - daysAgo;
-                                weeklyCompleted[index]++;
-                            }
                         }
                     }
 
@@ -226,15 +226,28 @@ public class StatsFragment extends Fragment {
 
     private void drawPieChart(int total, int completed, int missed) {
         List<PieEntry> entries = new ArrayList<>();
+        List<Integer> colors = new ArrayList<>();
+
         int pending = total - (completed + missed);
         if (pending < 0) pending = 0;
 
-        if (completed > 0) entries.add(new PieEntry(completed, "Done"));
-        if (missed > 0) entries.add(new PieEntry(missed, "Missed"));
-        if (pending > 0) entries.add(new PieEntry(pending, "Left"));
+        if (completed > 0) {
+            entries.add(new PieEntry(completed, "Done"));
+            colors.add(Color.parseColor("#66BB6A"));
+        }
+        if (missed > 0) {
+            entries.add(new PieEntry(missed, "Missed"));
+            colors.add(Color.parseColor("#EF5350"));
+        }
+        if (pending > 0) {
+            entries.add(new PieEntry(pending, "Pending"));
+            colors.add(Color.parseColor("#9575CD"));
+        }
+
+        if (entries.isEmpty()) return;
 
         PieDataSet dataSet = new PieDataSet(entries, "");
-        dataSet.setColors(new int[]{Color.parseColor("#66BB6A"), Color.parseColor("#EF5350"), Color.parseColor("#9575CD")});
+        dataSet.setColors(colors);
         dataSet.setValueTextColor(Color.WHITE);
         dataSet.setValueTextSize(14f);
 

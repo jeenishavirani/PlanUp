@@ -8,12 +8,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
@@ -35,6 +42,7 @@ public class EditTaskActivity extends AppCompatActivity {
     private MaterialButtonToggleGroup togglePriority;
     private MaterialSwitch switchAlarm;
     private ImageView btnBack;
+    private LinearLayout header;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
@@ -45,6 +53,11 @@ public class EditTaskActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Enable edge-to-edge
+        EdgeToEdge.enable(this);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        
         setContentView(R.layout.activity_edit_task);
 
         mAuth = FirebaseAuth.getInstance();
@@ -66,6 +79,22 @@ public class EditTaskActivity extends AppCompatActivity {
         togglePriority = findViewById(R.id.togglePriority);
         switchAlarm = findViewById(R.id.switchAlarm);
         btnBack = findViewById(R.id.btnBack);
+        header = findViewById(R.id.header);
+
+        // Handle system UI insets
+        View mainView = findViewById(R.id.main);
+        ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            
+            // Top padding for header
+            if (header != null) {
+                header.setPadding(header.getPaddingLeft(), systemBars.top, header.getPaddingRight(), header.getPaddingBottom());
+            }
+            
+            // Bottom padding for the main container
+            v.setPadding(0, 0, 0, systemBars.bottom);
+            return insets;
+        });
 
         loadTaskData();
 
