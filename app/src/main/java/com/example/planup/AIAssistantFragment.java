@@ -24,6 +24,10 @@ import com.example.planup.ai.IntentDetector;
 import com.example.planup.ai.FollowUpQuestionGenerator;
 import com.example.planup.ai.PlannerEngine;
 
+import com.example.planup.adapter.ChatAdapter;
+import com.example.planup.model.ChatMessage;
+
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +44,7 @@ public class AIAssistantFragment extends Fragment {
 
     private String currentIntent = null;
     private final List<String> collectedAnswers = new ArrayList<>();
+
 
     @Nullable
     @Override
@@ -61,14 +66,17 @@ public class AIAssistantFragment extends Fragment {
 
         LinearLayoutManager lm = new LinearLayoutManager(requireContext());
         lm.setStackFromEnd(true);
+        lm.setStackFromEnd(true); // chat behavior
         rvChat.setLayoutManager(lm);
         rvChat.setAdapter(adapter);
 
         updateEmptyState();
 
+        // 🔹 SEND BUTTON
         btnSend.setOnClickListener(v -> {
             String text = etMessage.getText().toString().trim();
             if (text.isEmpty()) return;
+
 
             addMessage(text, ChatMessage.USER);
             etMessage.setText("");
@@ -136,11 +144,55 @@ public class AIAssistantFragment extends Fragment {
         ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
             Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
             v.setPadding(0, 0, 0, imeInsets.bottom);
+
+            // User message
+            messages.add(new ChatMessage(text, ChatMessage.USER));
+            adapter.notifyItemInserted(messages.size() - 1);
+            rvChat.scrollToPosition(messages.size() - 1);
+            etMessage.setText("");
+
+            updateEmptyState();
+
+            // Fake AI reply (temporary)
+            rvChat.postDelayed(() -> {
+                messages.add(new ChatMessage(
+                        "Got it 👍 I’ll help you plan this.",
+                        ChatMessage.AI
+                ));
+                adapter.notifyItemInserted(messages.size() - 1);
+                rvChat.scrollToPosition(messages.size() - 1);
+            }, 600);
+        });
+
+        // ✅ CORRECT KEYBOARD + BOTTOM NAV HANDLING
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+
+            Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
+            Insets navInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+
+            int bottomPadding = Math.max(imeInsets.bottom, navInsets.bottom);
+
+            chatInputLayout.setPadding(
+                    chatInputLayout.getPaddingLeft(),
+                    chatInputLayout.getPaddingTop(),
+                    chatInputLayout.getPaddingRight(),
+                    bottomPadding
+            );
+
+            rvChat.setPadding(
+                    rvChat.getPaddingLeft(),
+                    rvChat.getPaddingTop(),
+                    rvChat.getPaddingRight(),
+                    bottomPadding + 8
+            );
+
+
             return insets;
         });
 
         return view;
     }
+
 
     // 🔹 Helper to add messages safely
     private void addMessage(String text, int type) {
@@ -151,6 +203,8 @@ public class AIAssistantFragment extends Fragment {
     }
 
     // 🔹 Empty state
+    // 🔹 EMPTY STATE HANDLING
+
     private void updateEmptyState() {
         if (messages.isEmpty()) {
             layoutEmptyChat.setVisibility(View.VISIBLE);
