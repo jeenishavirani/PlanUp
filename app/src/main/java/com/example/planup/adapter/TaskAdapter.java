@@ -2,6 +2,7 @@ package com.example.planup.adapter;
 
 import android.content.Context;
 import android.graphics.Paint;
+import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -97,6 +98,34 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             holder.priorityBar.setBackgroundColor(ContextCompat.getColor(context, R.color.priority_low));
         }
 
+        // 🔹 Handle AI Category
+        String category = task.getCategory();
+        if (category != null && !category.isEmpty()) {
+            holder.tvCategory.setVisibility(View.VISIBLE);
+            holder.tvCategory.setText(category);
+            
+            int colorResId;
+            switch (category.toLowerCase()) {
+                case "work": colorResId = R.color.cat_work; break;
+                case "personal": colorResId = R.color.cat_personal; break;
+                case "health": colorResId = R.color.cat_health; break;
+                case "finance": colorResId = R.color.cat_finance; break;
+                case "social": colorResId = R.color.cat_social; break;
+                case "study": colorResId = R.color.cat_study; break;
+                default: colorResId = R.color.cat_others; break;
+            }
+            
+            // Apply background color to the category tag
+            GradientDrawable drawable = (GradientDrawable) ContextCompat.getDrawable(context, R.drawable.bg_priority_low);
+            if (drawable != null) {
+                drawable = (GradientDrawable) drawable.mutate();
+                drawable.setColor(ContextCompat.getColor(context, colorResId));
+                holder.tvCategory.setBackground(drawable);
+            }
+        } else {
+            holder.tvCategory.setVisibility(View.GONE);
+        }
+
         // Handle Completion State
         boolean isCompleted = "Completed".equalsIgnoreCase(task.getStatus()) || "Completed Late".equalsIgnoreCase(task.getStatus());
         holder.cbTaskCompleted.setOnCheckedChangeListener(null);
@@ -148,7 +177,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     }
 
     static class TaskViewHolder extends RecyclerView.ViewHolder {
-        TextView tvTitle, tvTaskTime, tvPriority, tvStatus;
+        TextView tvTitle, tvTaskTime, tvPriority, tvStatus, tvCategory;
         CheckBox cbTaskCompleted;
         View priorityBar;
 
@@ -158,6 +187,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             tvTaskTime = itemView.findViewById(R.id.tvTaskTime);
             tvPriority = itemView.findViewById(R.id.tvPriority);
             tvStatus = itemView.findViewById(R.id.tvStatus);
+            tvCategory = itemView.findViewById(R.id.tvCategory);
             cbTaskCompleted = itemView.findViewById(R.id.cbTaskCompleted);
             priorityBar = itemView.findViewById(R.id.priorityBar);
         }

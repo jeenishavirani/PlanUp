@@ -36,8 +36,11 @@ public class GeminiTaskExtractor {
     public static class TaskResult {
         public boolean isTask;
         public String title;
+        public String description; // 🔹 Added description
         public String date;
         public String time;
+        public String priority;    // 🔹 Added priority
+        public String category;    // 🔹 Improved categories
         public String reply;
     }
 
@@ -109,11 +112,14 @@ public class GeminiTaskExtractor {
 
         String systemInstruction = "You are PlanUp AI assistant. Today is " + currentDate + ".\n" +
                 "Extract task details from user messages. Output MUST be valid JSON with this structure:\n" +
-                "{\"isTask\":boolean, \"title\":string, \"date\":string, \"time\":string, \"reply\":string}\n" +
+                "{\"isTask\":boolean, \"title\":string, \"description\":string, \"date\":string, \"time\":string, \"priority\":string, \"category\":string, \"reply\":string}\n" +
                 "Rules:\n" +
                 "1. isTask=true only if user wants to schedule/add a task.\n" +
                 "2. Extract date as YYYY-MM-DD and time as HH:mm if mentioned.\n" +
-                "3. If not a task, provide a friendly reply in the 'reply' field.";
+                "3. priority MUST be one of: High, Medium, Low. Infer based on importance/urgency keywords.\n" +
+                "4. category MUST be one of: Work, Personal, Health, Finance, Social, Study, Shopping, Home, Wellness, Entertainment, or Others.\n" +
+                "5. description should be a brief summary or extra details extracted from the prompt.\n" +
+                "6. If not a task, provide a helpful and context-aware reply in the 'reply' field.";
 
         GeminiRequest geminiRequest = new GeminiRequest(userMessage, systemInstruction);
 

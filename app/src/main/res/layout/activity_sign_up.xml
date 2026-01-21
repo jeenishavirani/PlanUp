@@ -2,110 +2,111 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_auth_gradient">
 
-    <ImageView
-        android:id="@+id/imgIllustration"
-        android:layout_width="180dp"
-        android:layout_height="140dp"
-        android:layout_marginTop="24dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/signup_illustration"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/txtTitle"
-        style="@style/AppText.Header"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Create Account"
-        android:textColor="@color/white"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/imgIllustration" />
-
-    <LinearLayout
-        android:id="@+id/signupCard"
-        android:layout_width="0dp"
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_margin="20dp"
-        android:background="@drawable/bg_white_card"
-        android:orientation="vertical"
-        android:padding="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/txtLogin"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/txtTitle">
+        android:fillViewport="true"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/txtLogin">
 
-        <androidx.core.widget.NestedScrollView
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:fillViewport="true">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingBottom="16dp">
+
+            <ImageView
+                android:id="@+id/imgIllustration"
+                android:layout_width="180dp"
+                android:layout_height="140dp"
+                android:layout_marginTop="24dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/signup_illustration" />
+
+            <TextView
+                android:id="@+id/txtTitle"
+                style="@style/AppText.Header"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Create Account"
+                android:textColor="@color/white" />
 
             <LinearLayout
+                android:id="@+id/signupCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_margin="20dp"
+                android:background="@drawable/bg_white_card"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="8dp">
 
-                <EditText
-                    android:id="@+id/etFullName"
-                    style="@style/AppEditText"
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:hint="Full Name"
-                    android:layout_marginBottom="12dp"
-                    android:inputType="textPersonName" />
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
-                <EditText
-                    android:id="@+id/nickName"
-                    style="@style/AppEditText"
-                    android:layout_width="match_parent"
-                    android:hint="Nickname"
-                    android:layout_marginBottom="12dp" />
+                    <EditText
+                        android:id="@+id/etFullName"
+                        style="@style/AppEditText"
+                        android:layout_width="match_parent"
+                        android:hint="Full Name"
+                        android:layout_marginBottom="12dp"
+                        android:inputType="textPersonName" />
 
-                <Spinner
-                    android:id="@+id/spinnerGender"
-                    style="@style/AppEditText"
-                    android:layout_width="match_parent"
-                    android:layout_marginBottom="12dp" />
+                    <EditText
+                        android:id="@+id/nickName"
+                        style="@style/AppEditText"
+                        android:layout_width="match_parent"
+                        android:hint="Nickname"
+                        android:layout_marginBottom="12dp" />
 
-                <EditText
-                    android:id="@+id/textEmail"
-                    style="@style/AppEditText"
-                    android:layout_width="match_parent"
-                    android:hint="Email"
-                    android:inputType="textEmailAddress"
-                    android:layout_marginBottom="12dp" />
+                    <Spinner
+                        android:id="@+id/spinnerGender"
+                        style="@style/AppEditText"
+                        android:layout_width="match_parent"
+                        android:layout_marginBottom="12dp" />
 
-                <EditText
-                    android:id="@+id/textPassword"
-                    style="@style/AppEditText"
-                    android:layout_width="match_parent"
-                    android:hint="Password"
-                    android:inputType="textPassword"
-                    android:layout_marginBottom="12dp" />
+                    <EditText
+                        android:id="@+id/textEmail"
+                        style="@style/AppEditText"
+                        android:layout_width="match_parent"
+                        android:hint="Email"
+                        android:inputType="textEmailAddress"
+                        android:layout_marginBottom="12dp" />
 
-                <EditText
-                    android:id="@+id/confirmPass"
-                    style="@style/AppEditText"
-                    android:layout_width="match_parent"
-                    android:hint="Confirm Password"
-                    android:inputType="textPassword"
-                    android:layout_marginBottom="24dp" />
+                    <EditText
+                        android:id="@+id/textPassword"
+                        style="@style/AppEditText"
+                        android:layout_width="match_parent"
+                        android:hint="Password"
+                        android:inputType="textPassword"
+                        android:layout_marginBottom="12dp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSignup"
-                    style="@style/AppButton"
-                    android:layout_width="match_parent"
-                    android:text="Sign Up" />
+                    <EditText
+                        android:id="@+id/confirmPass"
+                        style="@style/AppEditText"
+                        android:layout_width="match_parent"
+                        android:hint="Confirm Password"
+                        android:inputType="textPassword"
+                        android:layout_marginBottom="24dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSignup"
+                        style="@style/AppButton"
+                        android:layout_width="match_parent"
+                        android:text="Sign Up" />
+                </LinearLayout>
             </LinearLayout>
-        </androidx.core.widget.NestedScrollView>
-    </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
     <TextView
         android:id="@+id/txtLogin"

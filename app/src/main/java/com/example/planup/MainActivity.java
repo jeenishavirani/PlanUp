@@ -1,11 +1,11 @@
 package com.example.planup;
 
+import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.view.View;
 
 import androidx.activity.EdgeToEdge;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -17,18 +17,28 @@ import com.example.planup.adapter.ViewPagerAdapter;
 import com.example.planup.utils.NotificationHelper;
 import com.example.planup.utils.TaskCleanupHelper;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.auth.FirebaseAuth;
 
 public class MainActivity extends AppCompatActivity {
 
     private BottomNavigationView bottomNav;
     private ViewPager2 viewPager;
+    private FirebaseAuth mAuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
+        mAuth = FirebaseAuth.getInstance();
+        
+        // Check if user is signed in
+        if (mAuth.getCurrentUser() == null) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+
         EdgeToEdge.enable(this);
-        // Important for keyboard handling
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         
         setContentView(R.layout.activity_main);
@@ -47,11 +57,9 @@ public class MainActivity extends AppCompatActivity {
         bottomNav = findViewById(R.id.bottomNavigation);
         viewPager = findViewById(R.id.viewPager);
 
-        // Setup ViewPager with Adapter
         ViewPagerAdapter adapter = new ViewPagerAdapter(this);
         viewPager.setAdapter(adapter);
 
-        // Synchronize ViewPager with BottomNav
         viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
             @Override
             public void onPageSelected(int position) {
@@ -79,22 +87,18 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        // Handle Window Insets for ViewPager (Keyboard pushing UI up)
         ViewCompat.setOnApplyWindowInsetsListener(viewPager, (v, insets) -> {
             Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(0, 0, 0, imeInsets.bottom);
             return insets;
         });
 
-        // System Insets for Bottom Nav
         ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(0, 0, 0, systemBars.bottom);
             return insets;
         });
 
-        // Keyboard Detection to hide BottomNav
         View rootView = findViewById(android.R.id.content);
         rootView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             Rect r = new Rect();

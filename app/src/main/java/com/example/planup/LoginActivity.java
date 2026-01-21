@@ -18,7 +18,7 @@ import com.google.firebase.auth.FirebaseAuth;
 public class LoginActivity extends AppCompatActivity {
 
     EditText edtEmail, edtPassword;
-    TextView txtSignUp;
+    TextView txtSignUp, txtForgotPassword;
     Button btnLogin;
     FirebaseAuth mAuth;
 
@@ -30,8 +30,12 @@ public class LoginActivity extends AppCompatActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            
+            int bottomPadding = Math.max(systemBars.bottom, ime.bottom);
+            
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding);
+            return WindowInsetsCompat.CONSUMED;
         });
 
         // Firebase
@@ -42,10 +46,16 @@ public class LoginActivity extends AppCompatActivity {
         edtPassword = findViewById(R.id.edtPassword);
         btnLogin = findViewById(R.id.btnLogin);
         txtSignUp = findViewById(R.id.txtSignUp);
+        txtForgotPassword = findViewById(R.id.txtForgotPassword);
 
         // Go to Signup
         txtSignUp.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, SignUpActivity.class));
+        });
+
+        // Go to Forgot Password
+        txtForgotPassword.setOnClickListener(v -> {
+            startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class));
         });
 
         // Login Button
@@ -53,7 +63,6 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void loginUser() {
-
         String email = edtEmail.getText().toString().trim();
         String password = edtPassword.getText().toString().trim();
 
@@ -65,29 +74,23 @@ public class LoginActivity extends AppCompatActivity {
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-
                         Toast.makeText(this, "Login Successful", Toast.LENGTH_SHORT).show();
                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
                         finish();
-
                     } else {
                         Toast.makeText(this,
                                 task.getException().getMessage(),
                                 Toast.LENGTH_SHORT).show();
                     }
                 });
-
-
     }
+
     @Override
     protected void onStart() {
         super.onStart();
-
         if (mAuth.getCurrentUser() != null) {
-            // User already logged in
             startActivity(new Intent(LoginActivity.this, MainActivity.class));
             finish();
         }
     }
-
 }

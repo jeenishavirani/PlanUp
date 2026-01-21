@@ -64,6 +64,21 @@
                     android:paddingVertical="2dp"
                     android:background="@drawable/bg_priority_high" />
 
+                <!-- 🔹 AI Category Tag -->
+                <TextView
+                    android:id="@+id/tvCategory"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Work"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:background="@drawable/bg_priority_low"
+                    android:visibility="gone" />
+
                 <TextView
                     android:id="@+id/tvStatus"
                     android:layout_width="wrap_content"

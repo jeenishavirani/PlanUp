@@ -19,6 +19,7 @@ public class TaskModel {
     private Date dueDate;
     private long createdAt;
     private Long completedAt;
+    private String category;   // 🔹 AI-Generated Category
 
     // 🔹 Required empty constructor
     public TaskModel() {}
@@ -62,6 +63,10 @@ public class TaskModel {
         return completedAt;
     }
 
+    public String getCategory() {
+        return category;
+    }
+
     // ---------------- SETTERS ----------------
 
     public void setId(String id) {
@@ -98,6 +103,10 @@ public class TaskModel {
 
     public void setCompletedAt(Long completedAt) {
         this.completedAt = completedAt;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
     }
 
     // ---------------- FORMATTED HELPERS ----------------

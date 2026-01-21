@@ -18,6 +18,8 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashMap;
@@ -55,11 +57,16 @@ public class SignUpActivity extends AppCompatActivity {
         btnSignup = findViewById(R.id.btnSignup);
         txtLogin = findViewById(R.id.txtLogin);
 
-        // Handle system UI insets
+        // Handle system UI and IME (keyboard) insets
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            
+            // Use the maximum bottom inset between system bars and the keyboard
+            int bottomPadding = Math.max(systemBars.bottom, ime.bottom);
+            
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding);
+            return WindowInsetsCompat.CONSUMED;
         });
 
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
@@ -77,7 +84,6 @@ public class SignUpActivity extends AppCompatActivity {
     }
 
     private void registerUser() {
-
         String fullName = etFullName.getText().toString().trim();
         String nickname = etNickname.getText().toString().trim();
         String email = etEmail.getText().toString().trim();
@@ -103,23 +109,31 @@ public class SignUpActivity extends AppCompatActivity {
 
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnSuccessListener(authResult -> {
+                    FirebaseUser user = mAuth.getCurrentUser();
+                    if (user != null) {
+                        // Update Firebase Auth Profile with Full Name
+                        UserProfileChangeRequest profileUpdates = new UserProfileChangeRequest.Builder()
+                                .setDisplayName(fullName)
+                                .build();
 
-                    String uid = mAuth.getCurrentUser().getUid();
+                        user.updateProfile(profileUpdates);
 
-                    Map<String, Object> userMap = new HashMap<>();
-                    userMap.put("fullName", fullName);
-                    userMap.put("nickname", nickname);
-                    userMap.put("gender", gender);
-                    userMap.put("email", email);
+                        String uid = user.getUid();
+                        Map<String, Object> userMap = new HashMap<>();
+                        userMap.put("fullName", fullName);
+                        userMap.put("nickname", nickname);
+                        userMap.put("gender", gender);
+                        userMap.put("email", email);
 
-                    db.collection("users")
-                            .document(uid)
-                            .set(userMap)
-                            .addOnSuccessListener(unused -> {
-                                Toast.makeText(this, "Account Created!", Toast.LENGTH_SHORT).show();
-                                startActivity(new Intent(this, MainActivity.class));
-                                finish();
-                            });
+                        db.collection("users")
+                                .document(uid)
+                                .set(userMap)
+                                .addOnSuccessListener(unused -> {
+                                    Toast.makeText(this, "Account Created!", Toast.LENGTH_SHORT).show();
+                                    startActivity(new Intent(this, MainActivity.class));
+                                    finish();
+                                });
+                    }
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show());

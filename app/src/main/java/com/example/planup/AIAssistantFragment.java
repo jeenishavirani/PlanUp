@@ -35,7 +35,7 @@ import java.util.Locale;
 public class AIAssistantFragment extends Fragment {
 
     private static final String TAG = "AIAssistantFragment";
-    private static final String GEMINI_API_KEY = "AIzaSyDcttbdMngaa7Sm1xk2recRrlldoLW-r7o";
+    private static final String GEMINI_API_KEY = "AIzaSyD4tZgdNJicTmxyeZsgQnmjqYz41OYYS1o";
 
     private RecyclerView rvChat;
     private EditText etMessage;
@@ -157,6 +157,9 @@ public class AIAssistantFragment extends Fragment {
 
         TaskModel task = new TaskModel();
         task.setTitle(result.title);
+        task.setDescription(result.description); // 🔹 Set AI-extracted description
+        task.setPriority(result.priority);       // 🔹 Set AI-inferred priority
+        task.setCategory(result.category);       // 🔹 Set AI-generated category
         task.setStatus("Pending");
         task.setCreatedAt(System.currentTimeMillis());
 
