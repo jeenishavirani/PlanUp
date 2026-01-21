@@ -6,6 +6,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 import java.util.Collections;
@@ -51,7 +53,6 @@ public class TasksFragment extends Fragment
     ListenerRegistration taskListener;
 
     // Adapter
-    List<TaskModel> taskList;
     TaskAdapter taskAdapter;
 
     public TasksFragment() {
@@ -85,12 +86,11 @@ public class TasksFragment extends Fragment
         db = FirebaseFirestore.getInstance();
 
         // 🔹 RecyclerView
-        taskList = new ArrayList<>();
         rvTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
 
         taskAdapter = new TaskAdapter(
                 requireContext(),
-                taskList,
+                new ArrayList<>(),
                 task -> {
                     Intent intent = new Intent(requireContext(), TaskDetailActivity.class);
                     intent.putExtra("taskId", task.getId());
@@ -104,6 +104,10 @@ public class TasksFragment extends Fragment
         // 🔹 FAB click
         fabAddTask.setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), AddTaskActivity.class)));
+
+        // Add levitation (pulse) animation to FAB
+        Animation levitation = AnimationUtils.loadAnimation(requireContext(), R.anim.fab_pulse);
+        fabAddTask.startAnimation(levitation);
 
         return view;
     }
@@ -132,7 +136,7 @@ public class TasksFragment extends Fragment
 
                     if (querySnapshot == null) return;
 
-                    taskList.clear();
+                    List<TaskModel> newTasks = new ArrayList<>();
 
                     for (QueryDocumentSnapshot doc : querySnapshot) {
 
@@ -157,20 +161,11 @@ public class TasksFragment extends Fragment
                         // ✅ HIDE COMPLETED AND MISSED TASKS
                         // This fragment is for managing ACTIVE tasks only
                         if (!isDone && !task.isMissed()) {
-                            taskList.add(task);
+                            newTasks.add(task);
                         }
                     }
 
-                    // Empty state
-                    if (taskList.isEmpty()) {
-                        layoutEmpty.setVisibility(View.VISIBLE);
-                        rvTasks.setVisibility(View.GONE);
-                    } else {
-                        layoutEmpty.setVisibility(View.GONE);
-                        rvTasks.setVisibility(View.VISIBLE);
-                    }
-
-                    Collections.sort(taskList, (t1, t2) -> {
+                    Collections.sort(newTasks, (t1, t2) -> {
                         Date d1 = t1.getDueDate();
                         Date d2 = t2.getDueDate();
                         if (d1 == null && d2 == null) return 0;
@@ -179,7 +174,16 @@ public class TasksFragment extends Fragment
                         return d1.compareTo(d2);
                     });
 
-                    taskAdapter.notifyDataSetChanged();
+                    // Empty state
+                    if (newTasks.isEmpty()) {
+                        layoutEmpty.setVisibility(View.VISIBLE);
+                        rvTasks.setVisibility(View.GONE);
+                    } else {
+                        layoutEmpty.setVisibility(View.GONE);
+                        rvTasks.setVisibility(View.VISIBLE);
+                    }
+
+                    taskAdapter.updateTasks(newTasks);
                 });
     }
 

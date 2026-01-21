@@ -1,6 +1,7 @@
 package com.example.planup.adapter;
 
 import android.content.Context;
+import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,12 +9,16 @@ import android.widget.CheckBox;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.planup.R;
 import com.example.planup.model.TaskModel;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
 
@@ -21,12 +26,10 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     List<TaskModel> taskList;
     private boolean isViewOnly = false;
 
-    // 🔹 Click task → open TaskDetail
     public interface OnTaskClickListener {
         void onTaskClick(TaskModel task);
     }
 
-    // 🔹 Checkbox → update status
     public interface OnTaskStatusChangeListener {
         void onTaskStatusChanged(TaskModel task, boolean isCompleted);
     }
@@ -40,20 +43,27 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                        OnTaskStatusChangeListener statusChangeListener) {
 
         this.context = context;
-        this.taskList = taskList;
+        this.taskList = new ArrayList<>(taskList);
         this.clickListener = clickListener;
         this.statusChangeListener = statusChangeListener;
     }
 
-    // Constructor for view-only mode
+    // Constructor for View Only mode
     public TaskAdapter(Context context,
                        List<TaskModel> taskList,
                        OnTaskClickListener clickListener,
                        boolean isViewOnly) {
         this.context = context;
-        this.taskList = taskList;
+        this.taskList = new ArrayList<>(taskList);
         this.clickListener = clickListener;
         this.isViewOnly = isViewOnly;
+    }
+
+    public void updateTasks(List<TaskModel> newList) {
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new TaskDiffCallback(this.taskList, newList));
+        this.taskList.clear();
+        this.taskList.addAll(newList);
+        diffResult.dispatchUpdatesTo(this);
     }
 
     @NonNull
@@ -66,111 +76,81 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull TaskViewHolder holder, int position) {
-
         TaskModel task = taskList.get(position);
 
-        // 🔹 Title
         holder.tvTitle.setText(task.getTitle());
+        holder.tvTaskTime.setText(task.getFormattedDate() + " • " + task.getFormattedTime());
 
-        // 🔹 Date & Time
-        String dateTime = task.getFormattedDate();
-        if (!task.getFormattedTime().isEmpty()) {
-            dateTime += " • " + task.getFormattedTime();
-        }
-        holder.tvTaskTime.setText(dateTime);
-
-        // 🔹 Priority badge
+        // Update Priority Bar and Text
         String priority = task.getPriority();
         if ("High".equalsIgnoreCase(priority)) {
             holder.tvPriority.setText("H");
             holder.tvPriority.setBackgroundResource(R.drawable.bg_priority_high);
+            holder.priorityBar.setBackgroundColor(ContextCompat.getColor(context, R.color.priority_high));
         } else if ("Medium".equalsIgnoreCase(priority)) {
             holder.tvPriority.setText("M");
             holder.tvPriority.setBackgroundResource(R.drawable.bg_priority_medium);
+            holder.priorityBar.setBackgroundColor(ContextCompat.getColor(context, R.color.priority_medium));
         } else {
             holder.tvPriority.setText("L");
             holder.tvPriority.setBackgroundResource(R.drawable.bg_priority_low);
+            holder.priorityBar.setBackgroundColor(ContextCompat.getColor(context, R.color.priority_low));
         }
 
-        // 🔹 Reset checkbox listener
+        // Handle Completion State
+        boolean isCompleted = "Completed".equalsIgnoreCase(task.getStatus()) || "Completed Late".equalsIgnoreCase(task.getStatus());
         holder.cbTaskCompleted.setOnCheckedChangeListener(null);
-        holder.cbTaskCompleted.setChecked(
-                "Completed".equalsIgnoreCase(task.getStatus()) || 
-                "Completed Late".equalsIgnoreCase(task.getStatus())
-        );
+        holder.cbTaskCompleted.setChecked(isCompleted);
+
+        updateTaskStyle(holder, isCompleted, task.getStatus());
 
         if (isViewOnly) {
             holder.cbTaskCompleted.setEnabled(false);
-            holder.cbTaskCompleted.setAlpha(0.7f);
+            holder.cbTaskCompleted.setAlpha(0.6f);
         } else {
             holder.cbTaskCompleted.setEnabled(true);
             holder.cbTaskCompleted.setAlpha(1.0f);
-            
-            // 🔹 Checkbox → update status
             holder.cbTaskCompleted.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                updateTaskStyle(holder, isChecked, isChecked ? "Completed" : "Pending");
                 if (statusChangeListener != null) {
                     statusChangeListener.onTaskStatusChanged(task, isChecked);
                 }
             });
         }
 
-        // 🔹 Click → details
         holder.itemView.setOnClickListener(v -> {
-            if (clickListener != null) {
-                clickListener.onTaskClick(task);
-            }
+            if (clickListener != null) clickListener.onTaskClick(task);
         });
+    }
 
-        // ================= STATUS UI =================
-
-        if ("Missed".equalsIgnoreCase(task.getStatus())) {
-
-            holder.tvStatus.setText("Missed");
-            holder.tvStatus.setTextColor(
-                    context.getResources().getColor(R.color.task_missed)
-            );
-
-            if (!isViewOnly) {
-                holder.cbTaskCompleted.setEnabled(true);   // ALLOW RECOVERY
-            }
+    private void updateTaskStyle(TaskViewHolder holder, boolean isCompleted, String status) {
+        if (isCompleted) {
+            holder.tvTitle.setPaintFlags(holder.tvTitle.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
             holder.itemView.setAlpha(0.6f);
-
-        } else if ("Completed".equalsIgnoreCase(task.getStatus()) || "Completed Late".equalsIgnoreCase(task.getStatus())) {
-
             holder.tvStatus.setText("Completed");
-            holder.tvStatus.setTextColor(
-                    context.getResources().getColor(R.color.task_completed)
-            );
-
-            if (!isViewOnly) {
-                holder.cbTaskCompleted.setEnabled(true);
-            }
-            holder.itemView.setAlpha(1f);
-
+            holder.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.task_completed));
         } else {
-
-            holder.tvStatus.setText("Pending");
-            holder.tvStatus.setTextColor(
-                    context.getResources().getColor(R.color.task_pending)
-            );
-
-            if (!isViewOnly) {
-                holder.cbTaskCompleted.setEnabled(true);
+            holder.tvTitle.setPaintFlags(holder.tvTitle.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+            holder.itemView.setAlpha(1.0f);
+            if ("Missed".equalsIgnoreCase(status)) {
+                holder.tvStatus.setText("Missed");
+                holder.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.task_missed));
+            } else {
+                holder.tvStatus.setText("Pending");
+                holder.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.task_pending));
             }
-            holder.itemView.setAlpha(1f);
         }
     }
 
-
     @Override
     public int getItemCount() {
-        return taskList == null ? 0 : taskList.size();
+        return taskList.size();
     }
 
     static class TaskViewHolder extends RecyclerView.ViewHolder {
-
         TextView tvTitle, tvTaskTime, tvPriority, tvStatus;
         CheckBox cbTaskCompleted;
+        View priorityBar;
 
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -179,6 +159,20 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             tvPriority = itemView.findViewById(R.id.tvPriority);
             tvStatus = itemView.findViewById(R.id.tvStatus);
             cbTaskCompleted = itemView.findViewById(R.id.cbTaskCompleted);
+            priorityBar = itemView.findViewById(R.id.priorityBar);
         }
+    }
+
+    private static class TaskDiffCallback extends DiffUtil.Callback {
+        private final List<TaskModel> oldList;
+        private final List<TaskModel> newList;
+        public TaskDiffCallback(List<TaskModel> oldList, List<TaskModel> newList) {
+            this.oldList = oldList;
+            this.newList = newList;
+        }
+        @Override public int getOldListSize() { return oldList.size(); }
+        @Override public int getNewListSize() { return newList.size(); }
+        @Override public boolean areItemsTheSame(int oldP, int newP) { return Objects.equals(oldList.get(oldP).getId(), newList.get(newP).getId()); }
+        @Override public boolean areContentsTheSame(int oldP, int newP) { return oldList.get(oldP).equals(newList.get(newP)); }
     }
 }

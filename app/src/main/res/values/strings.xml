@@ -3,10 +3,20 @@
     <string name="stats_progress_title">Your Progress 📊</string>
     <string name="stats_progress_subtitle">Track your productivity journey</string>
     <string name="stats_total_tasks">Total Tasks</string>
-    <string name="stats_completed">Total Completed</string>
-    <string name="stats_missed">Totally Missed</string>
+    <string name="stats_completed">Completed</string>
+    <string name="stats_missed">Missed</string>
     <string name="stats_streak">Streak 🔥</string>
     <string name="stats_default_count">0</string>
     <string name="stats_no_chart_data">No chart data available</string>
     <string name="stats_motivation">Keep going 💪</string>
+
+    <string name="completed_tasks_title">Completed Tasks</string>
+    <string name="completed_tasks_subtitle">Your achievements</string>
+    <string name="missed_tasks_title">Missed Tasks</string>
+    <string name="missed_tasks_subtitle">Catch up when you can</string>
+    <string name="pending_tasks_title">Pending Tasks</string>
+    <string name="pending_tasks_subtitle">Things to do today</string>
+    <string name="total_tasks_title">Total Tasks</string>
+    <string name="total_tasks_subtitle">Everything you\'ve planned</string>
+    <string name="error_loading_tasks">Error loading tasks</string>
 </resources>

@@ -49,19 +49,17 @@ public class TaskListActivity extends AppCompatActivity
     List<TaskModel> taskList;
     TaskAdapter taskAdapter;
     
-    String filterType = "all"; // all, completed, missed
+    String filterType = "all"; // all, pending, completed, missed
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // 🔹 Enable Edge-to-Edge for immersive purple header
         EdgeToEdge.enable(this);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         
         setContentView(R.layout.activity_task_list);
 
-        // 🔹 Ensure status bar icons are light (white) since header is dark purple
         WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         controller.setAppearanceLightStatusBars(false);
 
@@ -75,15 +73,13 @@ public class TaskListActivity extends AppCompatActivity
         tvSubtitle = findViewById(R.id.tvSubtitle);
         headerBg = findViewById(R.id.headerBg);
 
-        // Apply window insets
         View mainLayout = findViewById(R.id.main_layout);
         ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             
-            // Adjust back button margin for status bar
             if (btnBack != null) {
                 ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) btnBack.getLayoutParams();
-                lp.topMargin = systemBars.top + 12; // Adjust base margin
+                lp.topMargin = systemBars.top + 12;
                 btnBack.setLayoutParams(lp);
             }
 
@@ -97,9 +93,10 @@ public class TaskListActivity extends AppCompatActivity
         taskList = new ArrayList<>();
         rvTasks.setLayoutManager(new LinearLayoutManager(this));
         
+        // Corrected constructor call for ViewOnly mode
         taskAdapter = new TaskAdapter(
                 this, 
-                taskList, 
+                new ArrayList<>(), 
                 task -> {
                     Intent intent = new Intent(this, TaskDetailActivity.class);
                     intent.putExtra("taskId", task.getId());
@@ -118,17 +115,21 @@ public class TaskListActivity extends AppCompatActivity
 
     private void setupHeader() {
         switch (filterType) {
+            case "pending":
+                tvTitle.setText(R.string.pending_tasks_title);
+                tvSubtitle.setText(R.string.pending_tasks_subtitle);
+                break;
             case "completed":
-                tvTitle.setText("Completed Tasks");
-                tvSubtitle.setText("Your achievements");
+                tvTitle.setText(R.string.completed_tasks_title);
+                tvSubtitle.setText(R.string.completed_tasks_subtitle);
                 break;
             case "missed":
-                tvTitle.setText("Missed Tasks");
-                tvSubtitle.setText("Catch up when you can");
+                tvTitle.setText(R.string.missed_tasks_title);
+                tvSubtitle.setText(R.string.missed_tasks_subtitle);
                 break;
             default:
-                tvTitle.setText("Total Tasks");
-                tvSubtitle.setText("Everything you've planned");
+                tvTitle.setText(R.string.total_tasks_title);
+                tvSubtitle.setText(R.string.total_tasks_subtitle);
                 break;
         }
     }
@@ -144,7 +145,7 @@ public class TaskListActivity extends AppCompatActivity
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    taskList.clear();
+                    List<TaskModel> newTasks = new ArrayList<>();
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         TaskModel task = doc.toObject(TaskModel.class);
                         task.setId(doc.getId());
@@ -152,16 +153,18 @@ public class TaskListActivity extends AppCompatActivity
                         boolean isDone = task.isDone();
                         boolean isMissed = task.isMissed();
                         
-                        if ("completed".equals(filterType)) {
-                            if (isDone) taskList.add(task);
+                        if ("pending".equals(filterType)) {
+                            if (!isDone && !isMissed) newTasks.add(task);
+                        } else if ("completed".equals(filterType)) {
+                            if (isDone) newTasks.add(task);
                         } else if ("missed".equals(filterType)) {
-                            if (isMissed) taskList.add(task);
+                            if (isMissed) newTasks.add(task);
                         } else {
-                            taskList.add(task);
+                            newTasks.add(task);
                         }
                     }
                     
-                    if (taskList.isEmpty()) {
+                    if (newTasks.isEmpty()) {
                         layoutEmpty.setVisibility(View.VISIBLE);
                         rvTasks.setVisibility(View.GONE);
                     } else {
@@ -169,11 +172,11 @@ public class TaskListActivity extends AppCompatActivity
                         rvTasks.setVisibility(View.VISIBLE);
                     }
                     
-                    taskAdapter.notifyDataSetChanged();
+                    taskAdapter.updateTasks(newTasks);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error fetching tasks", e);
-                    Toast.makeText(this, "Error loading tasks", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.error_loading_tasks, Toast.LENGTH_SHORT).show();
                 });
     }
 

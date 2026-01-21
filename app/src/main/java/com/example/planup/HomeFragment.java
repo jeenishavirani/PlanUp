@@ -11,6 +11,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -64,7 +66,6 @@ public class HomeFragment extends Fragment
     ListenerRegistration userListener;
 
     // Adapter
-    List<TaskModel> taskList;
     TaskAdapter taskAdapter;
 
     public HomeFragment() {
@@ -104,12 +105,11 @@ public class HomeFragment extends Fragment
         db = FirebaseFirestore.getInstance();
 
         // 🔹 RecyclerView
-        taskList = new ArrayList<>();
         rvTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
 
         taskAdapter = new TaskAdapter(
                 requireContext(),
-                taskList,
+                new ArrayList<>(),
                 task -> {
                     Intent intent = new Intent(requireContext(), TaskDetailActivity.class);
                     intent.putExtra("taskId", task.getId());
@@ -128,9 +128,13 @@ public class HomeFragment extends Fragment
                 startActivity(new Intent(requireContext(), AddTaskActivity.class)));
 
         // Setup stats click listeners to open filtered lists
-        tvPendingTasks.setOnClickListener(v -> openTaskList("all")); // Shows active tasks
+        tvPendingTasks.setOnClickListener(v -> openTaskList("pending")); // Shows pending tasks
         tvCompletedTasks.setOnClickListener(v -> openTaskList("completed"));
-        tvTotalTasks.setOnClickListener(v -> openTaskList("all")); // Show active tasks
+        tvTotalTasks.setOnClickListener(v -> openTaskList("all")); // Show all tasks
+
+        // Add pulse animation to FAB
+        Animation pulse = AnimationUtils.loadAnimation(requireContext(), R.anim.fab_pulse);
+        fabAddTask.startAnimation(pulse);
 
         return view;
     }
@@ -201,8 +205,7 @@ public class HomeFragment extends Fragment
 
                     if (querySnapshot == null) return;
 
-                    taskList.clear();
-
+                    List<TaskModel> newTasks = new ArrayList<>();
                     int pending = 0;
                     int completed = 0;
 
@@ -235,28 +238,11 @@ public class HomeFragment extends Fragment
 
                         // 🔹 ADD TO LIST ONLY IF PENDING (NOT DONE AND NOT MISSED)
                         if ("Pending".equalsIgnoreCase(status) && !task.isMissed()) {
-                            taskList.add(task);
+                            newTasks.add(task);
                         }
                     }
 
-                    // Total count for the screen reflects only what's currently in the list
-                    int screenTotal = taskList.size();
-
-                    // Stats updates
-                    tvPendingTasks.setText("Pending: " + pending);
-                    tvCompletedTasks.setText("Completed: " + completed);
-                    tvTotalTasks.setText("Total: " + screenTotal);
-
-                    // Empty state (shows if NO pending tasks)
-                    if (taskList.isEmpty()) {
-                        layoutEmpty.setVisibility(View.VISIBLE);
-                        rvTasks.setVisibility(View.GONE);
-                    } else {
-                        layoutEmpty.setVisibility(View.GONE);
-                        rvTasks.setVisibility(View.VISIBLE);
-                    }
-
-                    Collections.sort(taskList, (t1, t2) -> {
+                    Collections.sort(newTasks, (t1, t2) -> {
                         Date d1 = t1.getDueDate();
                         Date d2 = t2.getDueDate();
                         if (d1 == null && d2 == null) return 0;
@@ -265,7 +251,21 @@ public class HomeFragment extends Fragment
                         return d1.compareTo(d2);
                     });
 
-                    taskAdapter.notifyDataSetChanged();
+                    // Update stats
+                    tvPendingTasks.setText("Pending: " + pending);
+                    tvCompletedTasks.setText("Completed: " + completed);
+                    tvTotalTasks.setText("Total: " + querySnapshot.size());
+
+                    // Empty state
+                    if (newTasks.isEmpty()) {
+                        layoutEmpty.setVisibility(View.VISIBLE);
+                        rvTasks.setVisibility(View.GONE);
+                    } else {
+                        layoutEmpty.setVisibility(View.GONE);
+                        rvTasks.setVisibility(View.VISIBLE);
+                    }
+
+                    taskAdapter.updateTasks(newTasks);
                 });
     }
 

@@ -5,38 +5,37 @@ import android.os.Bundle;
 import android.view.View;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.fragment.app.Fragment;
+import androidx.viewpager2.widget.ViewPager2;
 
+import com.example.planup.adapter.ViewPagerAdapter;
 import com.example.planup.utils.NotificationHelper;
 import com.example.planup.utils.TaskCleanupHelper;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
 
-    BottomNavigationView bottomNav;
+    private BottomNavigationView bottomNav;
+    private ViewPager2 viewPager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Enable edge-to-edge
         EdgeToEdge.enable(this);
+        // Important for keyboard handling
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         
         setContentView(R.layout.activity_main);
 
-        // 🧹 Cleanup old tasks (older than 1 week)
         TaskCleanupHelper.cleanOldTasks();
-
-        // 🔔 Notifications
         ReminderScheduler.scheduleDailyMorningReminder(this);
 
-        // 🔹 Show welcome notification only once when app opens
         if (savedInstanceState == null) {
             NotificationHelper.show(
                     this,
@@ -46,63 +45,67 @@ public class MainActivity extends AppCompatActivity {
         }
 
         bottomNav = findViewById(R.id.bottomNavigation);
+        viewPager = findViewById(R.id.viewPager);
 
-        // Apply bottom insets to BottomNavigationView
+        // Setup ViewPager with Adapter
+        ViewPagerAdapter adapter = new ViewPagerAdapter(this);
+        viewPager.setAdapter(adapter);
+
+        // Synchronize ViewPager with BottomNav
+        viewPager.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+            @Override
+            public void onPageSelected(int position) {
+                super.onPageSelected(position);
+                switch (position) {
+                    case 0: bottomNav.setSelectedItemId(R.id.nav_home); break;
+                    case 1: bottomNav.setSelectedItemId(R.id.nav_tasks); break;
+                    case 2: bottomNav.setSelectedItemId(R.id.nav_stats); break;
+                    case 3: bottomNav.setSelectedItemId(R.id.nav_ai); break;
+                }
+            }
+        });
+
+        bottomNav.setOnItemSelectedListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.nav_home) {
+                viewPager.setCurrentItem(0);
+            } else if (itemId == R.id.nav_tasks) {
+                viewPager.setCurrentItem(1);
+            } else if (itemId == R.id.nav_stats) {
+                viewPager.setCurrentItem(2);
+            } else if (itemId == R.id.nav_ai) {
+                viewPager.setCurrentItem(3);
+            }
+            return true;
+        });
+
+        // Handle Window Insets for ViewPager (Keyboard pushing UI up)
+        ViewCompat.setOnApplyWindowInsetsListener(viewPager, (v, insets) -> {
+            Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(0, 0, 0, imeInsets.bottom);
+            return insets;
+        });
+
+        // System Insets for Bottom Nav
         ViewCompat.setOnApplyWindowInsetsListener(bottomNav, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(0, 0, 0, systemBars.bottom);
             return insets;
         });
 
-        // 🔥 KEYBOARD DETECTION (THIS FIXES FLOATING ISSUE)
+        // Keyboard Detection to hide BottomNav
         View rootView = findViewById(android.R.id.content);
         rootView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             Rect r = new Rect();
             rootView.getWindowVisibleDisplayFrame(r);
-
             int screenHeight = rootView.getRootView().getHeight();
             int keypadHeight = screenHeight - r.bottom;
-
-            // Keyboard is open if height > 15% of screen
             if (keypadHeight > screenHeight * 0.15) {
                 bottomNav.setVisibility(View.GONE);
             } else {
                 bottomNav.setVisibility(View.VISIBLE);
             }
         });
-
-        // 🔹 Default fragment
-        if (savedInstanceState == null) {
-            loadFragment(new HomeFragment());
-            bottomNav.setSelectedItemId(R.id.nav_home);
-        }
-
-        bottomNav.setOnItemSelectedListener(item -> {
-
-            Fragment fragment = null;
-
-            if (item.getItemId() == R.id.nav_home) {
-                fragment = new HomeFragment();
-            } else if (item.getItemId() == R.id.nav_tasks) {
-                fragment = new TasksFragment();
-            } else if (item.getItemId() == R.id.nav_stats) {
-                fragment = new StatsFragment();
-            } else if (item.getItemId() == R.id.nav_ai) {
-                fragment = new AIAssistantFragment();
-            }
-
-            if (fragment != null) {
-                loadFragment(fragment);
-                return true;
-            }
-            return false;
-        });
-    }
-
-    private void loadFragment(Fragment fragment) {
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.fragmentContainer, fragment)
-                .commit();
     }
 }

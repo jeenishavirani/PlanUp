@@ -1,8 +1,12 @@
 package com.example.planup.adapter;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -11,11 +15,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.planup.R;
 import com.example.planup.model.ChatMessage;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private List<ChatMessage> messages;
+    private final Set<Integer> animatedPositions = new HashSet<>();
 
     public ChatAdapter(List<ChatMessage> messages) {
         this.messages = messages;
@@ -49,8 +56,45 @@ public class ChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (holder instanceof UserVH) {
             ((UserVH) holder).tv.setText(msg.getMessage());
         } else {
-            ((AiVH) holder).tv.setText(msg.getMessage());
+            AiVH aiVH = (AiVH) holder;
+            String text = msg.getMessage();
+            
+            // Typewriter effect for AI responses
+            if (msg.getSender() == ChatMessage.AI && !animatedPositions.contains(position)) {
+                animatedPositions.add(position);
+                animateText(aiVH.tv, text);
+            } else {
+                aiVH.tv.setText(text);
+            }
         }
+        
+        // General entry animation for the bubble
+        setAnimation(holder.itemView, position);
+    }
+
+    private void animateText(TextView textView, String text) {
+        final int delay = 15; // Speed of typing in ms
+        textView.setText("");
+        Handler handler = new Handler(Looper.getMainLooper());
+        
+        new Thread(() -> {
+            for (int i = 0; i <= text.length(); i++) {
+                String partialText = text.substring(0, i);
+                handler.post(() -> textView.setText(partialText));
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
+        }).start();
+    }
+
+    private void setAnimation(View viewToAnimate, int position) {
+        // Simple slide up and fade for every new bubble
+        Animation animation = AnimationUtils.loadAnimation(viewToAnimate.getContext(), android.R.anim.fade_in);
+        animation.setDuration(400);
+        viewToAnimate.startAnimation(animation);
     }
 
     @Override

@@ -20,4 +20,9 @@
     <color name="task_missed">#E53935</color>      <!-- Red -->
     
     <color name="background_light">#F5F5F5</color>
+
+    <!-- Priority Colors -->
+    <color name="priority_high">#E53935</color>
+    <color name="priority_medium">#FB8C00</color>
+    <color name="priority_low">#43A047</color>
 </resources>

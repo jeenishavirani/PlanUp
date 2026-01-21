@@ -22,10 +22,11 @@ public class ApiClient {
                     .build();
 
             retrofit = new Retrofit.Builder()
-                    .baseUrl("https://api.openai.com/") // placeholder
+                    .baseUrl("https://generativelanguage.googleapis.com/")
                     .addConverterFactory(GsonConverterFactory.create())
                     .client(client)
                     .build();
+
         }
 
         return retrofit;

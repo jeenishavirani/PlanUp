@@ -3,73 +3,86 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="6dp"
     app:cardCornerRadius="16dp"
-    app:cardElevation="6dp">
+    app:cardElevation="2dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:orientation="horizontal">
 
-        <!-- TASK TITLE -->
-        <TextView
-            android:id="@+id/tvTaskTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Study DSA"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#1F1F1F" />
+        <!-- Priority Indicator Bar -->
+        <View
+            android:id="@+id/priorityBar"
+            android:layout_width="6dp"
+            android:layout_height="match_parent"
+            android:background="@color/task_pending" />
 
-        <!-- TIME -->
-        <TextView
-            android:id="@+id/tvTaskTime"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="09:00 AM"
-            android:textSize="14sp"
-            android:textColor="#777777"
-            android:layout_marginTop="4dp" />
-
-        <!-- BOTTOM ROW -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            <!-- PRIORITY CHIP -->
             <TextView
-                android:id="@+id/tvPriority"
+                android:id="@+id/tvTaskTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="H"
+                android:text="Task Title"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="#1F1F1F" />
+
+            <TextView
+                android:id="@+id/tvTaskTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Time"
                 android:textSize="13sp"
-                android:textColor="@android:color/white"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp"
-                android:background="@drawable/bg_priority_high" />
+                android:textColor="#777777"
+                android:layout_marginTop="2dp" />
 
-            <!-- STATUS -->
-            <TextView
-                android:id="@+id/tvStatus"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Pending"
-                android:textSize="14sp"
-                android:textColor="#9E9E9E"
-                android:layout_marginStart="12dp" />
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
 
-            <CheckBox
-                android:id="@+id/cbTaskCompleted"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                <TextView
+                    android:id="@+id/tvPriority"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="H"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:background="@drawable/bg_priority_high" />
 
+                <TextView
+                    android:id="@+id/tvStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Pending"
+                    android:textSize="12sp"
+                    android:textStyle="italic" />
+
+            </LinearLayout>
         </LinearLayout>
+
+        <CheckBox
+            android:id="@+id/cbTaskCompleted"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="12dp"
+            android:buttonTint="@color/task_completed" />
 
     </LinearLayout>
 

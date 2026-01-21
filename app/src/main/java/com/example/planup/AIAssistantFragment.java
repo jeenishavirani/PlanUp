@@ -1,6 +1,7 @@
 package com.example.planup;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,27 +20,32 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.planup.adapter.ChatAdapter;
 import com.example.planup.model.ChatMessage;
-import com.example.planup.ai.IntentDetector;
-import com.example.planup.ai.FollowUpQuestionGenerator;
-import com.example.planup.ai.PlannerEngine;
+import com.example.planup.model.TaskModel;
+import com.example.planup.ai.GeminiTaskExtractor;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class AIAssistantFragment extends Fragment {
+
+    private static final String TAG = "AIAssistantFragment";
+    private static final String GEMINI_API_KEY = "AIzaSyDcttbdMngaa7Sm1xk2recRrlldoLW-r7o";
 
     private RecyclerView rvChat;
     private EditText etMessage;
     private ImageView btnSend;
-    private LinearLayout chatInputLayout, chatHeader;
+    private LinearLayout chatHeader;
     private LinearLayout layoutEmptyChat;
 
     private ChatAdapter adapter;
     private final List<ChatMessage> messages = new ArrayList<>();
-
-    private String currentIntent = null;
-    private final List<String> collectedAnswers = new ArrayList<>();
-
+    private String userName = "there";
 
     @Nullable
     @Override
@@ -54,7 +60,6 @@ public class AIAssistantFragment extends Fragment {
         rvChat = view.findViewById(R.id.rvChat);
         etMessage = view.findViewById(R.id.etMessage);
         btnSend = view.findViewById(R.id.btnSend);
-        chatInputLayout = view.findViewById(R.id.chatInputLayout);
         layoutEmptyChat = view.findViewById(R.id.layoutEmptyChat);
         chatHeader = view.findViewById(R.id.chatHeader);
 
@@ -65,84 +70,126 @@ public class AIAssistantFragment extends Fragment {
         rvChat.setLayoutManager(lm);
         rvChat.setAdapter(adapter);
 
-        updateEmptyState();
+        // Only fetch and greet if the chat is empty (start of session)
+        if (messages.isEmpty()) {
+            fetchUserNameAndGreet();
+        }
 
-        // 🔹 SEND BUTTON
         btnSend.setOnClickListener(v -> {
             String text = etMessage.getText().toString().trim();
             if (text.isEmpty()) return;
 
-
             addMessage(text, ChatMessage.USER);
             etMessage.setText("");
 
-            // 🧠 STEP 1: Detect intent
-            if (currentIntent == null) {
-
-                currentIntent = IntentDetector.detect(text);
-
-                addMessage("Got it 👍 Let me ask you a few things.", ChatMessage.AI);
-
-                List<String> questions =
-                        FollowUpQuestionGenerator.getQuestions(currentIntent);
-
-                if (questions == null || questions.isEmpty()) {
-                    addMessage(
-                            "I need a bit more detail. Can you explain your goal?",
-                            ChatMessage.AI
-                    );
-                    currentIntent = null;
-                    return;
-                }
-
-                addMessage(questions.get(0), ChatMessage.AI);
-                return;
-            }
-
-            // 🧠 STEP 2: Collect answers
-            collectedAnswers.add(text);
-
-            List<String> questions =
-                    FollowUpQuestionGenerator.getQuestions(currentIntent);
-
-            if (questions != null && collectedAnswers.size() < questions.size()) {
-
-                addMessage(
-                        questions.get(collectedAnswers.size()),
-                        ChatMessage.AI
-                );
-
-            } else {
-                // 🧠 STEP 3: Generate final plan
-                String plan =
-                        PlannerEngine.generatePlan(currentIntent, collectedAnswers);
-
-                addMessage(plan, ChatMessage.AI);
-
-                // Reset state
-                currentIntent = null;
-                collectedAnswers.clear();
-            }
+            processAIMessage(text);
         });
 
-        // ✅ HANDLE SYSTEM UI INSETS
         ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-
-            // Top inset for header
             chatHeader.setPadding(chatHeader.getPaddingLeft(), systemBars.top, chatHeader.getPaddingRight(), chatHeader.getPaddingBottom());
-
-            // Bottom inset for input bar (handle both nav bar and keyboard)
             v.setPadding(0, 0, 0, systemBars.bottom);
-
             return insets;
         });
 
         return view;
     }
 
+    private void fetchUserNameAndGreet() {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid != null) {
+            FirebaseFirestore.getInstance().collection("users").document(uid)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            // Changed to "fullName" as used in SignUpActivity
+                            String name = documentSnapshot.getString("fullName");
+                            if (name == null || name.isEmpty()) {
+                                name = documentSnapshot.getString("nickname");
+                            }
+                            
+                            if (name != null && !name.isEmpty()) {
+                                userName = name.split(" ")[0]; // Get first name
+                            }
+                        }
+                        addGreeting();
+                    })
+                    .addOnFailureListener(e -> addGreeting());
+        } else {
+            addGreeting();
+        }
+    }
 
-    // 🔹 Helper to add messages safely
+    private void addGreeting() {
+        if (messages.isEmpty()) {
+            addMessage("Hi " + userName + "! 👋 I'm your PlanUp assistant. How can I help you today?", ChatMessage.AI);
+        }
+    }
+
+    private void processAIMessage(String text) {
+        GeminiTaskExtractor.extractTask(text, GEMINI_API_KEY, new GeminiTaskExtractor.ExtractionCallback() {
+            @Override
+            public void onResult(GeminiTaskExtractor.TaskResult result) {
+                if (getActivity() == null) return;
+                
+                getActivity().runOnUiThread(() -> {
+                    if (result.isTask) {
+                        saveTaskToFirestore(result);
+                    } else {
+                        addMessage(result.reply != null ? result.reply : "I'm here to help!", ChatMessage.AI);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(String error) {
+                if (getActivity() == null) return;
+                getActivity().runOnUiThread(() -> 
+                    addMessage("I'm sorry: " + error + " 🌐", ChatMessage.AI)
+                );
+            }
+        });
+    }
+
+    private void saveTaskToFirestore(GeminiTaskExtractor.TaskResult result) {
+        String uid = FirebaseAuth.getInstance().getUid();
+        if (uid == null) return;
+
+        TaskModel task = new TaskModel();
+        task.setTitle(result.title);
+        task.setStatus("Pending");
+        task.setCreatedAt(System.currentTimeMillis());
+
+        Calendar cal = Calendar.getInstance();
+        try {
+            if (result.date != null && !result.date.equalsIgnoreCase("null")) {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+                Date d = sdf.parse(result.date);
+                if (d != null) {
+                    Calendar dCal = Calendar.getInstance();
+                    dCal.setTime(d);
+                    cal.set(Calendar.YEAR, dCal.get(Calendar.YEAR));
+                    cal.set(Calendar.MONTH, dCal.get(Calendar.MONTH));
+                    cal.set(Calendar.DAY_OF_MONTH, dCal.get(Calendar.DAY_OF_MONTH));
+                }
+            }
+            if (result.time != null && !result.time.equalsIgnoreCase("null")) {
+                String[] t = result.time.split(":");
+                cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(t[0]));
+                cal.set(Calendar.MINUTE, Integer.parseInt(t[1]));
+            }
+            task.setDueDate(cal.getTime());
+        } catch (Exception e) {
+            Log.e(TAG, "Parsing error", e);
+        }
+
+        FirebaseFirestore.getInstance()
+                .collection("users").document(uid)
+                .collection("tasks").add(task)
+                .addOnSuccessListener(ref -> addMessage(result.reply != null ? result.reply : "Task added: " + result.title + " ✅", ChatMessage.AI))
+                .addOnFailureListener(e -> addMessage("Failed to save task to Firestore.", ChatMessage.AI));
+    }
+
     private void addMessage(String text, int type) {
         messages.add(new ChatMessage(text, type));
         adapter.notifyItemInserted(messages.size() - 1);
