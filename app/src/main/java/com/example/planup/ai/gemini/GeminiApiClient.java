@@ -11,7 +11,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 public class GeminiApiClient {
 
     private static final String TAG = "GeminiApiClient";
-    private static final String API_KEY = "AIzaSyCeCq4uhUmtaWVLi47JkpYp2INoN27QTmU";
+    private static final String API_KEY = "xxx";
     private static GenerativeModelFutures modelFutures;
 
     public static synchronized GenerativeModelFutures getModel() {
