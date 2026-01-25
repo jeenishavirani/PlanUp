@@ -38,7 +38,7 @@ public class StreakManager {
                 Long streakLong = userDoc.getLong("streak");
                 if (streakLong != null) currentLifetimeStreak = streakLong.intValue();
             }
-            
+
             final int finalLifetimeStreak = currentLifetimeStreak;
             final String lastDateStr = userDoc.getString("lastStreakDate");
 
@@ -99,7 +99,7 @@ public class StreakManager {
 
     private static int calculateLocalStreak(Set<LocalDate> completedDates, LocalDate today) {
         if (completedDates.isEmpty()) return 0;
-        
+
         int streak = 0;
         boolean completedToday = completedDates.contains(today);
         boolean completedYesterday = completedDates.contains(today.minusDays(1));

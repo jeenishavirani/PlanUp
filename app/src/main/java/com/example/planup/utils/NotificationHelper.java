@@ -14,9 +14,10 @@ import com.example.planup.R;
 
 public class NotificationHelper {
 
-    public static final String CHANNEL_ID = "planup_reminders";
+    // Unified Channel IDs to ensure consistency
+    public static final String CHANNEL_ID = "task_alarms";
     public static final String CHANNEL_MILESTONES = "planup_milestones";
-    public static final String ACTION_DONE = "com.example.planup.ACTION_DONE";
+    public static final String ACTION_DONE = "ACTION_DONE";
 
     public static void init(Context context) {
         createChannels(context);
@@ -36,7 +37,7 @@ public class NotificationHelper {
                 PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(R.drawable.applogo) // Using app logo
                 .setContentTitle(title)
                 .setContentText(message)
                 .setAutoCancel(true)
@@ -61,17 +62,17 @@ public class NotificationHelper {
         // Action Intent for "Done"
         Intent doneIntent = new Intent(context, TaskActionReceiver.class);
         doneIntent.setAction(ACTION_DONE);
-        doneIntent.putExtra("task_id", taskId);
-        PendingIntent donePendingIntent = PendingIntent.getBroadcast(context, (int)System.currentTimeMillis(), 
+        doneIntent.putExtra("taskId", taskId); // Consistent key "taskId"
+        PendingIntent donePendingIntent = PendingIntent.getBroadcast(context, taskId.hashCode(), 
                 doneIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(R.drawable.applogo)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
-                .addAction(R.drawable.ic_priority, "Mark as Done", donePendingIntent) // Action button
+                .addAction(android.R.drawable.ic_menu_save, "Mark as Done", donePendingIntent)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER);
 
@@ -86,7 +87,7 @@ public class NotificationHelper {
         createChannels(context);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_notification)
+                .setSmallIcon(R.drawable.applogo)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setStyle(new NotificationCompat.BigTextStyle().bigText(bigText))
@@ -104,7 +105,7 @@ public class NotificationHelper {
         createChannels(context);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_MILESTONES)
-                .setSmallIcon(R.drawable.ic_priority)
+                .setSmallIcon(R.drawable.applogo)
                 .setContentTitle(title)
                 .setContentText(message)
                 .setAutoCancel(true)
@@ -122,6 +123,7 @@ public class NotificationHelper {
             NotificationManager manager = context.getSystemService(NotificationManager.class);
             if (manager == null) return;
 
+            // Unified Channel ID "task_alarms" to match AlarmReceiver
             NotificationChannel reminders = new NotificationChannel(
                     CHANNEL_ID, "PlanUp Reminders", NotificationManager.IMPORTANCE_HIGH);
             reminders.setDescription("Time-sensitive task reminders");

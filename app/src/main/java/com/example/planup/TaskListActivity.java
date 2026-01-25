@@ -28,36 +28,36 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class TaskListActivity extends AppCompatActivity 
+public class TaskListActivity extends AppCompatActivity
         implements TaskAdapter.OnTaskStatusChangeListener {
 
     private static final String TAG = "TaskListActivity";
-    
+
     RecyclerView rvTasks;
     LinearLayout layoutEmpty;
     ImageView btnBack;
     TextView tvTitle, tvSubtitle;
-    View headerBg;
-    
+
     FirebaseAuth mAuth;
     FirebaseFirestore db;
-    
+
     List<TaskModel> taskList;
     TaskAdapter taskAdapter;
-    
-    String filterType = "all"; // all, pending, completed, missed
+
+    String filterType = "all"; 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         EdgeToEdge.enable(this);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-        
+
         setContentView(R.layout.activity_task_list);
 
         WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
@@ -71,18 +71,15 @@ public class TaskListActivity extends AppCompatActivity
         btnBack = findViewById(R.id.btnBack);
         tvTitle = findViewById(R.id.tvTitle);
         tvSubtitle = findViewById(R.id.tvSubtitle);
-        headerBg = findViewById(R.id.headerBg);
 
         View mainLayout = findViewById(R.id.main_layout);
         ViewCompat.setOnApplyWindowInsetsListener(mainLayout, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            
             if (btnBack != null) {
                 ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) btnBack.getLayoutParams();
                 lp.topMargin = systemBars.top + 12;
                 btnBack.setLayoutParams(lp);
             }
-
             v.setPadding(0, 0, 0, systemBars.bottom);
             return insets;
         });
@@ -92,18 +89,17 @@ public class TaskListActivity extends AppCompatActivity
 
         taskList = new ArrayList<>();
         rvTasks.setLayoutManager(new LinearLayoutManager(this));
-        
-        // Corrected constructor call for ViewOnly mode
+
         taskAdapter = new TaskAdapter(
-                this, 
-                new ArrayList<>(), 
+                this,
+                taskList,
                 task -> {
                     Intent intent = new Intent(this, TaskDetailActivity.class);
                     intent.putExtra("taskId", task.getId());
                     intent.putExtra("isViewOnly", true);
                     startActivity(intent);
-                }, 
-                true 
+                },
+                this
         );
         rvTasks.setAdapter(taskAdapter);
 
@@ -114,69 +110,83 @@ public class TaskListActivity extends AppCompatActivity
     }
 
     private void setupHeader() {
-        switch (filterType) {
-            case "pending":
-                tvTitle.setText(R.string.pending_tasks_title);
-                tvSubtitle.setText(R.string.pending_tasks_subtitle);
-                break;
+        switch (filterType.toLowerCase()) {
             case "completed":
-                tvTitle.setText(R.string.completed_tasks_title);
-                tvSubtitle.setText(R.string.completed_tasks_subtitle);
+                tvTitle.setText("Completed Tasks");
+                tvSubtitle.setText("Your achievements");
                 break;
             case "missed":
-                tvTitle.setText(R.string.missed_tasks_title);
-                tvSubtitle.setText(R.string.missed_tasks_subtitle);
+                tvTitle.setText("Missed Tasks");
+                tvSubtitle.setText("Catch up when you can");
+                break;
+            case "pending":
+                tvTitle.setText("Pending Tasks");
+                tvSubtitle.setText("Still to be done");
                 break;
             default:
-                tvTitle.setText(R.string.total_tasks_title);
-                tvSubtitle.setText(R.string.total_tasks_subtitle);
+                tvTitle.setText("Total Tasks");
+                tvSubtitle.setText("Everything you've planned");
                 break;
         }
     }
 
     private void fetchTasks() {
         if (mAuth.getCurrentUser() == null) return;
-        
+
         String uid = mAuth.getCurrentUser().getUid();
-        
+
         db.collection("users")
                 .document(uid)
                 .collection("tasks")
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    List<TaskModel> newTasks = new ArrayList<>();
+                    taskList.clear();
+                    Date now = new Date();
+                    
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
                         TaskModel task = doc.toObject(TaskModel.class);
                         task.setId(doc.getId());
+
+                        String status = task.getStatus();
+                        if (status == null) status = "Pending";
                         
                         boolean isDone = task.isDone();
-                        boolean isMissed = task.isMissed();
-                        
-                        if ("pending".equals(filterType)) {
-                            if (!isDone && !isMissed) newTasks.add(task);
-                        } else if ("completed".equals(filterType)) {
-                            if (isDone) newTasks.add(task);
-                        } else if ("missed".equals(filterType)) {
-                            if (isMissed) newTasks.add(task);
-                        } else {
-                            newTasks.add(task);
+                        // Task is missed if status is "Missed" OR (status is "Pending" AND dueDate has passed)
+                        boolean logicallyMissed = "Missed".equalsIgnoreCase(status) || 
+                                ("Pending".equalsIgnoreCase(status) && task.getDueDate() != null && now.after(task.getDueDate()));
+
+                        switch (filterType.toLowerCase()) {
+                            case "completed":
+                                if (isDone) taskList.add(task);
+                                break;
+                            case "missed":
+                                if (logicallyMissed) taskList.add(task);
+                                break;
+                            case "pending":
+                                // A task is truly pending only if it's "Pending" AND NOT missed yet
+                                if ("Pending".equalsIgnoreCase(status) && !logicallyMissed) taskList.add(task);
+                                break;
+                            case "all":
+                            default:
+                                taskList.add(task);
+                                break;
                         }
                     }
-                    
-                    if (newTasks.isEmpty()) {
+
+                    if (taskList.isEmpty()) {
                         layoutEmpty.setVisibility(View.VISIBLE);
                         rvTasks.setVisibility(View.GONE);
                     } else {
                         layoutEmpty.setVisibility(View.GONE);
                         rvTasks.setVisibility(View.VISIBLE);
                     }
-                    
-                    taskAdapter.updateTasks(newTasks);
+
+                    taskAdapter.updateTasks(taskList);
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error fetching tasks", e);
-                    Toast.makeText(this, R.string.error_loading_tasks, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Error loading tasks", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -185,15 +195,15 @@ public class TaskListActivity extends AppCompatActivity
         if (mAuth.getCurrentUser() == null) return;
 
         String uid = mAuth.getCurrentUser().getUid();
-
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("status", isCompleted ? "Completed" : "Pending");
-        updates.put("completedAt", isCompleted ? System.currentTimeMillis() : null);
+        String newStatus = isCompleted ? "Completed" : "Pending";
 
         db.collection("users")
                 .document(uid)
                 .collection("tasks")
                 .document(task.getId())
-                .update(updates);
+                .update("status", newStatus, "completedAt", isCompleted ? System.currentTimeMillis() : null)
+                .addOnSuccessListener(unused -> {
+                    fetchTasks(); // Refresh list to respect current filter
+                });
     }
 }

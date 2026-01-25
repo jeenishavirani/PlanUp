@@ -12,7 +12,12 @@
           "package_name": "com.example.planup"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "886788079764-fq0n4luni6d49ec2oq1inr1kpbpp10fu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCeCq4uhUmtaWVLi47JkpYp2INoN27QTmU"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "886788079764-fq0n4luni6d49ec2oq1inr1kpbpp10fu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

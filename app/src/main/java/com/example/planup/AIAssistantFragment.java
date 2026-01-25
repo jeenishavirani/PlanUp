@@ -35,7 +35,7 @@ import java.util.Locale;
 public class AIAssistantFragment extends Fragment {
 
     private static final String TAG = "AIAssistantFragment";
-    private static final String GEMINI_API_KEY = "AIzaSyD4tZgdNJicTmxyeZsgQnmjqYz41OYYS1o";
+    private static final String GEMINI_API_KEY = "AIzaSyAlkIUbSve1qEGTXNgKtIRWG7ptVS5GAhI";
 
     private RecyclerView rvChat;
     private EditText etMessage;

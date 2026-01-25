@@ -36,12 +36,12 @@ public class TaskActionReceiver extends BroadcastReceiver {
                 .update("status", "Completed")
                 .addOnSuccessListener(unused -> {
                     Toast.makeText(context, "Task marked as completed!", Toast.LENGTH_SHORT).show();
-                    
+
                     // Cancel the notification
                     NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
                     manager.cancel(taskId.hashCode());
                 })
-                .addOnFailureListener(e -> 
+                .addOnFailureListener(e ->
                         Toast.makeText(context, "Failed to update task", Toast.LENGTH_SHORT).show());
     }
 }

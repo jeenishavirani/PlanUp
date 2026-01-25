@@ -36,10 +36,10 @@ public class TaskCleanupHelper {
                         batch.delete(doc.getReference());
                     }
 
-                    batch.commit().addOnSuccessListener(unused -> 
-                        Log.d(TAG, "Old tasks (older than 1 week) deleted successfully.")
-                    ).addOnFailureListener(e -> 
-                        Log.e(TAG, "Failed to delete old tasks", e)
+                    batch.commit().addOnSuccessListener(unused ->
+                            Log.d(TAG, "Old tasks (older than 1 week) deleted successfully.")
+                    ).addOnFailureListener(e ->
+                            Log.e(TAG, "Failed to delete old tasks", e)
                     );
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error querying old tasks", e));

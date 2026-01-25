@@ -61,7 +61,7 @@ public class AddTaskActivity extends AppCompatActivity {
     private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
-                    scheduleAlarmAndFinish(tempTaskId, tempTaskTitle);
+                    scheduleAllRemindersAndFinish(tempTaskId, tempTaskTitle);
                 } else {
                     Toast.makeText(this, "Task saved, but alarm won't show without notification permission.", Toast.LENGTH_LONG).show();
                     finish();
@@ -72,7 +72,6 @@ public class AddTaskActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Enable edge-to-edge
         EdgeToEdge.enable(this);
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         
@@ -88,17 +87,12 @@ public class AddTaskActivity extends AppCompatActivity {
         btnBack = findViewById(R.id.btnBack);
         layoutHeader = findViewById(R.id.layoutHeader);
 
-        // Handle system UI insets
         View mainView = findViewById(R.id.main);
         ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            
-            // Top padding for header
             if (layoutHeader != null) {
                 layoutHeader.setPadding(layoutHeader.getPaddingLeft(), systemBars.top, layoutHeader.getPaddingRight(), layoutHeader.getPaddingBottom());
             }
-            
-            // Bottom padding for the main container
             v.setPadding(0, 0, 0, systemBars.bottom);
             return insets;
         });
@@ -147,13 +141,8 @@ public class AddTaskActivity extends AppCompatActivity {
             return;
         }
 
-        if (date.equals("Date")) {
-            Toast.makeText(this, "Please select a date", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (time.equals("Time")) {
-            Toast.makeText(this, "Please select a time", Toast.LENGTH_SHORT).show();
+        if (date.equals("Date") || time.equals("Time")) {
+            Toast.makeText(this, "Please select date and time", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -169,7 +158,6 @@ public class AddTaskActivity extends AppCompatActivity {
 
         boolean hasAlarm = switchAlarm.isChecked();
         String uid = mAuth.getCurrentUser().getUid();
-
         Date dueDate = alarmCalendar.getTime();
 
         TaskModel task = new TaskModel();
@@ -181,11 +169,10 @@ public class AddTaskActivity extends AppCompatActivity {
         task.setDueDate(dueDate);
         task.setCreatedAt(System.currentTimeMillis());
 
-
         db.collection("users").document(uid).collection("tasks").add(task)
                 .addOnSuccessListener(documentReference -> {
                     if (hasAlarm) {
-                        checkAndScheduleAlarm(documentReference.getId(), title);
+                        checkAndScheduleReminders(documentReference.getId(), title);
                     } else {
                         Toast.makeText(this, "Task added successfully", Toast.LENGTH_SHORT).show();
                         finish();
@@ -200,7 +187,7 @@ public class AddTaskActivity extends AppCompatActivity {
         return selectedButton.getText().toString();
     }
 
-    private void checkAndScheduleAlarm(String taskId, String taskTitle) {
+    private void checkAndScheduleReminders(String taskId, String taskTitle) {
         this.tempTaskId = taskId;
         this.tempTaskTitle = taskTitle;
 
@@ -211,15 +198,15 @@ public class AddTaskActivity extends AppCompatActivity {
             }
         }
 
-        scheduleAlarmAndFinish(taskId, taskTitle);
+        scheduleAllRemindersAndFinish(taskId, taskTitle);
     }
 
-    private void scheduleAlarmAndFinish(String taskId, String taskTitle) {
+    private void scheduleAllRemindersAndFinish(String taskId, String taskTitle) {
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (!alarmManager.canScheduleExactAlarms()) {
-                Toast.makeText(this, "Task saved. Please grant 'Alarms & reminders' permission for alarms to work.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Task saved. Please grant 'Alarms & reminders' permission.", Toast.LENGTH_LONG).show();
                 Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getPackageName()));
                 startActivity(intent);
                 finish();
@@ -227,12 +214,22 @@ public class AddTaskActivity extends AppCompatActivity {
             }
         }
 
-        scheduleAlarm(taskId, taskTitle);
-        Toast.makeText(this, "Task saved and alarm set!", Toast.LENGTH_SHORT).show();
+        // 1. Primary Alarm (at task time)
+        schedulePrimaryAlarm(taskId, taskTitle);
+
+        // 2. Proactive Reminders
+        int taskIdHash = taskId.hashCode();
+        ReminderScheduler.scheduleTwoHourBeforeReminder(this, alarmCalendar.getTimeInMillis(), taskIdHash, taskTitle);
+        ReminderScheduler.scheduleFiveMinuteBeforeReminder(this, alarmCalendar.getTimeInMillis(), taskIdHash, taskTitle);
+        
+        // 3. Missed Task Notification (5 min after)
+        ReminderScheduler.scheduleMissedTaskReminder(this, alarmCalendar.getTimeInMillis(), taskIdHash, taskTitle, taskId);
+
+        Toast.makeText(this, "Task saved and reminders set!", Toast.LENGTH_SHORT).show();
         finish();
     }
 
-    private void scheduleAlarm(String taskId, String taskTitle) {
+    private void schedulePrimaryAlarm(String taskId, String taskTitle) {
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         Intent intent = new Intent(this, AlarmReceiver.class);
         intent.putExtra("taskTitle", taskTitle);
