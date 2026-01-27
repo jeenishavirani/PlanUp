@@ -35,7 +35,6 @@ import java.util.Locale;
 public class AIAssistantFragment extends Fragment {
 
     private static final String TAG = "AIAssistantFragment";
-    private static final String GEMINI_API_KEY = "AIzaSyAlkIUbSve1qEGTXNgKtIRWG7ptVS5GAhI";
 
     private RecyclerView rvChat;
     private EditText etMessage;
@@ -46,6 +45,11 @@ public class AIAssistantFragment extends Fragment {
     private ChatAdapter adapter;
     private final List<ChatMessage> messages = new ArrayList<>();
     private String userName = "there";
+
+    private enum State { IDLE, AWAITING_REMINDER, AWAITING_PRIORITY }
+    private State currentState = State.IDLE;
+    private List<GeminiTaskExtractor.TaskResult> pendingTasks = new ArrayList<>();
+    private boolean pendingReminderPreference = false;
 
     @Nullable
     @Override
@@ -70,7 +74,6 @@ public class AIAssistantFragment extends Fragment {
         rvChat.setLayoutManager(lm);
         rvChat.setAdapter(adapter);
 
-        // Only fetch and greet if the chat is empty (start of session)
         if (messages.isEmpty()) {
             fetchUserNameAndGreet();
         }
@@ -82,7 +85,7 @@ public class AIAssistantFragment extends Fragment {
             addMessage(text, ChatMessage.USER);
             etMessage.setText("");
 
-            processAIMessage(text);
+            handleConversation(text);
         });
 
         ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
@@ -95,6 +98,21 @@ public class AIAssistantFragment extends Fragment {
         return view;
     }
 
+    private void handleConversation(String text) {
+        switch (currentState) {
+            case AWAITING_REMINDER:
+                handleReminderResponse(text);
+                break;
+            case AWAITING_PRIORITY:
+                handlePriorityResponse(text);
+                break;
+            case IDLE:
+            default:
+                processAIMessage(text);
+                break;
+        }
+    }
+
     private void fetchUserNameAndGreet() {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid != null) {
@@ -102,14 +120,13 @@ public class AIAssistantFragment extends Fragment {
                     .get()
                     .addOnSuccessListener(documentSnapshot -> {
                         if (documentSnapshot.exists()) {
-                            // Changed to "fullName" as used in SignUpActivity
                             String name = documentSnapshot.getString("fullName");
                             if (name == null || name.isEmpty()) {
                                 name = documentSnapshot.getString("nickname");
                             }
                             
                             if (name != null && !name.isEmpty()) {
-                                userName = name.split(" ")[0]; // Get first name
+                                userName = name.split(" ")[0];
                             }
                         }
                         addGreeting();
@@ -127,14 +144,31 @@ public class AIAssistantFragment extends Fragment {
     }
 
     private void processAIMessage(String text) {
-        GeminiTaskExtractor.extractTask(text, GEMINI_API_KEY, new GeminiTaskExtractor.ExtractionCallback() {
+        GeminiTaskExtractor.extractTask(text, BuildConfig.GEMINI_API_KEY, new GeminiTaskExtractor.ExtractionCallback() {
             @Override
-            public void onResult(GeminiTaskExtractor.TaskResult result) {
+            public void onResult(GeminiTaskExtractor.ExtractionResult result) {
                 if (getActivity() == null) return;
                 
                 getActivity().runOnUiThread(() -> {
-                    if (result.isTask) {
-                        saveTaskToFirestore(result);
+                    if (result.hasTasks && result.tasks != null && !result.tasks.isEmpty()) {
+                        pendingTasks = result.tasks;
+                        
+                        // Check if reminder is already specified
+                        boolean allHaveReminders = true;
+                        for (GeminiTaskExtractor.TaskResult task : pendingTasks) {
+                            if (!task.wantsReminder) {
+                                allHaveReminders = false;
+                                break;
+                            }
+                        }
+
+                        if (allHaveReminders) {
+                            pendingReminderPreference = true;
+                            askForPriority();
+                        } else {
+                            currentState = State.AWAITING_REMINDER;
+                            addMessage("Would you like me to set reminders for these tasks? (Yes/No)", ChatMessage.AI);
+                        }
                     } else {
                         addMessage(result.reply != null ? result.reply : "I'm here to help!", ChatMessage.AI);
                     }
@@ -151,21 +185,52 @@ public class AIAssistantFragment extends Fragment {
         });
     }
 
-    private void saveTaskToFirestore(GeminiTaskExtractor.TaskResult result) {
+    private void handleReminderResponse(String text) {
+        pendingReminderPreference = text.toLowerCase().contains("yes") || text.toLowerCase().contains("yeah") || text.toLowerCase().contains("sure");
+        askForPriority();
+    }
+
+    private void askForPriority() {
+        currentState = State.AWAITING_PRIORITY;
+        addMessage("What priority level should I set for these tasks? (High, Medium, or Low)", ChatMessage.AI);
+    }
+
+    private void handlePriorityResponse(String text) {
+        String priority = "Medium"; // Default
+        String input = text.toLowerCase();
+        if (input.contains("high")) priority = "High";
+        else if (input.contains("low")) priority = "Low";
+        else if (input.contains("medium")) priority = "Medium";
+
+        saveAllPendingTasks(pendingReminderPreference, priority);
+        
+        currentState = State.IDLE;
+        pendingTasks.clear();
+        addMessage("Done! I've added your tasks with " + priority + " priority. ✅", ChatMessage.AI);
+    }
+
+    private void saveAllPendingTasks(boolean setReminder, String priority) {
+        for (GeminiTaskExtractor.TaskResult taskResult : pendingTasks) {
+            saveTaskToFirestore(taskResult, setReminder || taskResult.wantsReminder, priority);
+        }
+    }
+
+    private void saveTaskToFirestore(GeminiTaskExtractor.TaskResult result, boolean alarm, String priority) {
         String uid = FirebaseAuth.getInstance().getUid();
         if (uid == null) return;
 
         TaskModel task = new TaskModel();
         task.setTitle(result.title);
-        task.setDescription(result.description); // 🔹 Set AI-extracted description
-        task.setPriority(result.priority);       // 🔹 Set AI-inferred priority
-        task.setCategory(result.category);       // 🔹 Set AI-generated category
+        task.setDescription(result.description);
+        task.setPriority(priority); // Use the user's chosen priority
+        task.setCategory(result.category);
         task.setStatus("Pending");
+        task.setAlarm(alarm);
         task.setCreatedAt(System.currentTimeMillis());
 
         Calendar cal = Calendar.getInstance();
         try {
-            if (result.date != null && !result.date.equalsIgnoreCase("null")) {
+            if (result.date != null && !result.date.equalsIgnoreCase("null") && !result.date.isEmpty()) {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
                 Date d = sdf.parse(result.date);
                 if (d != null) {
@@ -176,7 +241,7 @@ public class AIAssistantFragment extends Fragment {
                     cal.set(Calendar.DAY_OF_MONTH, dCal.get(Calendar.DAY_OF_MONTH));
                 }
             }
-            if (result.time != null && !result.time.equalsIgnoreCase("null")) {
+            if (result.time != null && !result.time.equalsIgnoreCase("null") && !result.time.isEmpty()) {
                 String[] t = result.time.split(":");
                 cal.set(Calendar.HOUR_OF_DAY, Integer.parseInt(t[0]));
                 cal.set(Calendar.MINUTE, Integer.parseInt(t[1]));
@@ -189,8 +254,7 @@ public class AIAssistantFragment extends Fragment {
         FirebaseFirestore.getInstance()
                 .collection("users").document(uid)
                 .collection("tasks").add(task)
-                .addOnSuccessListener(ref -> addMessage(result.reply != null ? result.reply : "Task added: " + result.title + " ✅", ChatMessage.AI))
-                .addOnFailureListener(e -> addMessage("Failed to save task to Firestore.", ChatMessage.AI));
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to save task", e));
     }
 
     private void addMessage(String text, int type) {

@@ -6,9 +6,14 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import okhttp3.ConnectionPool;
+import okhttp3.Dispatcher;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -27,34 +32,46 @@ public class GeminiTaskExtractor {
     
     private static GeminiApiService service;
     private static final Gson gson = new Gson();
+    private static final Random random = new Random();
 
     public interface ExtractionCallback {
-        void onResult(TaskResult result);
+        void onResult(ExtractionResult result);
         void onError(String error);
     }
 
     public static class TaskResult {
-        public boolean isTask;
         public String title;
-        public String description; // 🔹 Added description
+        public String description;
         public String date;
         public String time;
-        public String priority;    // 🔹 Added priority
-        public String category;    // 🔹 Improved categories
+        public String priority;
+        public String category;
+        public boolean wantsReminder;
+    }
+
+    public static class ExtractionResult {
+        public boolean hasTasks;
+        public List<TaskResult> tasks = new ArrayList<>();
         public String reply;
     }
 
     private static synchronized GeminiApiService getService() {
         if (service == null) {
             HttpLoggingInterceptor logging = new HttpLoggingInterceptor();
-            logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+            logging.setLevel(HttpLoggingInterceptor.Level.HEADERS);
             
+            // Ultra-stable Dispatcher for high-end performance
+            Dispatcher dispatcher = new Dispatcher();
+            dispatcher.setMaxRequestsPerHost(10);
+
             OkHttpClient client = new OkHttpClient.Builder()
+                    .dispatcher(dispatcher)
                     .addInterceptor(logging)
-                    .addInterceptor(new RetryInterceptor())
-                    .connectTimeout(60, TimeUnit.SECONDS)
-                    .readTimeout(60, TimeUnit.SECONDS)
-                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .addInterceptor(new AdvancedRetryInterceptor())
+                    .connectTimeout(45, TimeUnit.SECONDS)
+                    .readTimeout(120, TimeUnit.SECONDS) // Deep processing time
+                    .writeTimeout(45, TimeUnit.SECONDS)
+                    .connectionPool(new ConnectionPool(5, 10, TimeUnit.MINUTES))
                     .retryOnConnectionFailure(true)
                     .build();
 
@@ -69,57 +86,60 @@ public class GeminiTaskExtractor {
         return service;
     }
 
-    private static class RetryInterceptor implements Interceptor {
+    /**
+     * Advanced Interceptor with Jittered Exponential Backoff
+     */
+    private static class AdvancedRetryInterceptor implements Interceptor {
         @Override
         public okhttp3.Response intercept(Chain chain) throws IOException {
             Request request = chain.request();
-            okhttp3.Response response = null;
             int retryCount = 0;
-            int maxRetries = 3;
-            long delay = 1000;
+            int maxRetries = 6; // High-end persistence
+            long baseDelay = 1200;
 
-            while (retryCount <= maxRetries) {
+            while (true) {
                 try {
-                    response = chain.proceed(request);
-                    if (response.isSuccessful()) {
+                    okhttp3.Response response = chain.proceed(request);
+                    
+                    // Success or client-side error (no point retrying 400s)
+                    if (response.isSuccessful() || (response.code() >= 400 && response.code() < 500 && response.code() != 429)) {
                         return response;
                     }
-                    if (response.code() != 429 && response.code() < 500) {
-                        return response;
-                    }
+
+                    response.close();
                 } catch (IOException e) {
                     if (retryCount >= maxRetries) throw e;
+                    Log.w(TAG, "Network handshake failed, attempt " + (retryCount + 1));
                 }
 
-                if (response != null) response.close();
-                
                 retryCount++;
+                if (retryCount > maxRetries) {
+                    throw new IOException("Aborting after " + maxRetries + " attempts.");
+                }
+
+                // Jittered Exponential Backoff calculation
+                long jitter = random.nextInt(800);
+                long delay = (long) Math.pow(2, retryCount) * baseDelay + jitter;
+                
                 try {
-                    Log.d(TAG, "Retrying request... attempt " + retryCount);
-                    Thread.sleep(delay);
-                    delay *= 2;
+                    Log.d(TAG, "Stabilizing connection... Retrying in " + delay + "ms");
+                    Thread.sleep(Math.min(delay, 25000)); // Cap at 25s
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new IOException(e);
+                    throw new IOException("Retry interrupted", e);
                 }
             }
-            return response;
         }
     }
 
     public static void extractTask(String userMessage, String apiKey, ExtractionCallback callback) {
         String currentDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-        String systemInstruction = "You are PlanUp AI assistant. Today is " + currentDate + ".\n" +
-                "Extract task details from user messages. Output MUST be valid JSON with this structure:\n" +
-                "{\"isTask\":boolean, \"title\":string, \"description\":string, \"date\":string, \"time\":string, \"priority\":string, \"category\":string, \"reply\":string}\n" +
-                "Rules:\n" +
-                "1. isTask=true only if user wants to schedule/add a task.\n" +
-                "2. Extract date as YYYY-MM-DD and time as HH:mm if mentioned.\n" +
-                "3. priority MUST be one of: High, Medium, Low. Infer based on importance/urgency keywords.\n" +
-                "4. category MUST be one of: Work, Personal, Health, Finance, Social, Study, Shopping, Home, Wellness, Entertainment, or Others.\n" +
-                "5. description should be a brief summary or extra details extracted from the prompt.\n" +
-                "6. If not a task, provide a helpful and context-aware reply in the 'reply' field.";
+        // Streamlined System Instruction for faster AI "Cold Start"
+        String systemInstruction = "Act as PlanUp ssistant. Today:" + currentDate + ".\n" +
+                "Output ONLY JSON.\n" +
+                "Structure: {\"hasTasks\":bool, \"tasks\":[{\"title\":str, \"description\":str, \"date\":str, \"time\":str, \"priority\":str, \"category\":str, \"wantsReminder\":bool}], \"reply\":str}\n" +
+                "Rules: date=YYYY-MM-DD, time=HH:mm, priority=High/Medium/Low, wantsReminder=true if requested.";
 
         GeminiRequest geminiRequest = new GeminiRequest(userMessage, systemInstruction);
 
@@ -137,67 +157,39 @@ public class GeminiTaskExtractor {
                                     .getAsJsonObject("content").getAsJsonArray("parts").get(0).getAsJsonObject()
                                     .get("text").getAsString();
 
-                            String cleanedJson = cleanJson(aiText);
-                            callback.onResult(gson.fromJson(cleanedJson, TaskResult.class));
+                            callback.onResult(gson.fromJson(cleanJson(aiText), ExtractionResult.class));
                         } else {
-                            callback.onError("I couldn't generate a response. Please try rephrasing your request.");
+                            callback.onError("AI Engine Warmup required. Please try again.");
                         }
                     } else {
-                        handleErrorResponse(response, callback);
+                        handleError(response.code(), callback);
                     }
                 } catch (Exception e) {
-                    Log.e(TAG, "Parse Error", e);
-                    callback.onError("I'm having trouble processing that right now. Please try again in a moment.");
+                    Log.e(TAG, "Payload Parse Error", e);
+                    callback.onError("Data sync error. Rephrasing might help!");
                 }
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                Log.e(TAG, "Network failure", t);
-                if (t instanceof java.net.SocketTimeoutException) {
-                    callback.onError("Connection timed out. Please try again when your connection is stronger.");
-                } else if (t instanceof java.net.UnknownHostException) {
-                    callback.onError("No internet connection detected. Please check your signal.");
-                } else {
-                    callback.onError("I'm having trouble connecting. Please check your network and try again.");
-                }
+                Log.e(TAG, "Critical Network Failure", t);
+                callback.onError("System is currently offline. Please check your signal 📶");
             }
         });
     }
 
-    private static void handleErrorResponse(Response<ResponseBody> response, ExtractionCallback callback) {
-        int code = response.code();
-        Log.e(TAG, "API Error: " + code);
-        switch (code) {
-            case 401:
-            case 403:
-                callback.onError("There's an issue with my AI configuration. Please contact support.");
-                break;
-            case 429:
-                callback.onError("I'm receiving too many requests. Please wait a few seconds before trying again.");
-                break;
-            case 500:
-            case 503:
-            case 504:
-                callback.onError("The AI servers are currently busy. Please try again in a moment.");
-                break;
-            default:
-                callback.onError("I'm experiencing some technical difficulties (Error " + code + "). Please try again later.");
-                break;
-        }
+    private static void handleError(int code, ExtractionCallback callback) {
+        if (code == 429) callback.onError("Server busy (Rate Limit). Waiting for clearance...");
+        else if (code >= 500) callback.onError("AI Cluster is rebooting. One moment...");
+        else callback.onError("Connection lost (Error " + code + "). Check internet.");
     }
 
     private static String cleanJson(String text) {
         if (text == null) return "{}";
         text = text.trim();
-        if (text.startsWith("```json")) {
-            text = text.substring(7);
-        } else if (text.startsWith("```")) {
-            text = text.substring(3);
+        if (text.contains("{")) {
+            text = text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1);
         }
-        if (text.endsWith("```")) {
-            text = text.substring(0, text.length() - 3);
-        }
-        return text.trim();
+        return text;
     }
 }
