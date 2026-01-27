@@ -64,10 +64,10 @@ public class ReminderReceiver extends BroadcastReceiver {
                                     .update("status", "Missed")
                                     .addOnSuccessListener(unused -> {
                                         Log.d("ReminderReceiver", "Task status updated to Missed: " + taskId);
-                                        
+
                                         NotificationHelper.showNotification(
-                                                context, 
-                                                "⚠️ Task Missed", 
+                                                context,
+                                                "⚠️ Task Missed",
                                                 "You missed: " + taskTitle + ". The task is now marked as Missed."
                                         );
                                     })

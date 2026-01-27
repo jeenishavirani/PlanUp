@@ -17,7 +17,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
         // Add Gemini API Key to BuildConfig
-        buildConfigField("String", "GEMINI_API_KEY", "\"API_KEY_HERE\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"api key\"")
     }
 
     buildFeatures {
